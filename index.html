@@ -1,0 +1,2103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Cardiac Digital Twin</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #101a2e;
+      --panel-2: #16223c;
+      --text: #e5eefc;
+      --muted: #9fb0cf;
+      --accent: #60a5fa;
+      --accent-2: #22c55e;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --line: #223253;
+      --tribo: #ff5c5c;
+      --ecg: #5aa7ff;
+      --pat: #37d67a;
+      --foot: #ffd166;
+      --rpeak: #ff4d6d;
+      --twin: #a78bfa;
+      --twin-soft: #5b21b6;
+      --normal: #22c55e;
+      --pvc: #ef4444;
+      --pac: #f59e0b;
+      --abnormal: #f97316;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #07101f 0%, #0b1220 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 12px;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 12px;
+    }
+
+    .card {
+      background: rgba(16, 26, 46, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+    }
+
+    /* ============ TWIN HERO ============ */
+    .twin-hero {
+      background: linear-gradient(135deg, rgba(91, 33, 182, 0.18) 0%, rgba(16, 26, 46, 0.94) 60%);
+      border: 1px solid #3b2466;
+      border-radius: 16px;
+      padding: 14px;
+      margin-bottom: 12px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+    .twin-orb {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #c4b5fd 0%, #7c3aed 45%, #4c1d95 100%);
+      box-shadow: 0 0 30px rgba(139, 92, 246, 0.4), inset 0 0 24px rgba(0,0,0,0.5);
+      position: relative;
+      flex-shrink: 0;
+      transition: box-shadow 0.4s ease, background 0.4s ease;
+    }
+    .twin-orb.warn {
+      background: radial-gradient(circle at 30% 30%, #fde68a 0%, #f59e0b 45%, #78350f 100%);
+      box-shadow: 0 0 30px rgba(245, 158, 11, 0.5), inset 0 0 24px rgba(0,0,0,0.5);
+    }
+    .twin-orb.alert {
+      background: radial-gradient(circle at 30% 30%, #fecaca 0%, #ef4444 45%, #7f1d1d 100%);
+      box-shadow: 0 0 36px rgba(239, 68, 68, 0.55), inset 0 0 24px rgba(0,0,0,0.5);
+    }
+    .twin-orb.idle {
+      background: radial-gradient(circle at 30% 30%, #94a3b8 0%, #475569 45%, #1e293b 100%);
+      box-shadow: 0 0 12px rgba(100, 116, 139, 0.2), inset 0 0 24px rgba(0,0,0,0.5);
+    }
+    .twin-orb::after {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      border-radius: 50%;
+      border: 1px dashed rgba(167, 139, 250, 0.3);
+      animation: twin-spin 16s linear infinite;
+    }
+    @keyframes twin-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .twin-info { min-width: 0; }
+    .twin-state-label {
+      font-size: 0.78rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 2px;
+    }
+    .twin-state {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .twin-divergence {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .twin-divergence b { color: var(--text); }
+    .twin-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .twin-actions button {
+      min-width: 140px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .section-title {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    button, input[type="number"], input[type="text"] {
+      background: var(--panel-2);
+      border: 1px solid #2c426c;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font: inherit;
+      font-size: 0.92rem;
+    }
+    button {
+      cursor: pointer;
+      min-height: 40px;
+      font-weight: 600;
+    }
+    button.primary { background: #1d4ed8; }
+    button.danger { background: #991b1b; }
+    button.secondary { background: #1e293b; }
+    button.twin { background: #6d28d9; }
+    button.twin:hover { background: #7c3aed; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 6px 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    label > span:first-child { min-width: 110px; }
+    input[type="range"] { width: 100%; }
+    input[type="checkbox"] { transform: scale(1.2); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .metric {
+      background: rgba(22,34,60,.85);
+      border: 1px solid #243553;
+      border-radius: 12px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .metric .k {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .metric .v {
+      font-size: 1.12rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .metric .u {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 3px;
+    }
+    .metric .delta {
+      font-size: 0.74rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .metric .delta.up { color: #fca5a5; }
+    .metric .delta.dn { color: #86efac; }
+    .metric .delta.flat { color: var(--muted); }
+
+    .status {
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: #10213e;
+      border: 1px solid #23406a;
+      color: var(--muted);
+      margin-bottom: 10px;
+      word-break: break-word;
+      font-size: 0.9rem;
+    }
+    .status.ok { color: #9ae6b4; border-color: #22543d; background: #0d2518; }
+    .status.warn { color: #fde68a; border-color: #854d0e; background: #2a1b05; }
+    .status.err { color: #fecaca; border-color: #7f1d1d; background: #2a0d10; }
+    .status.twin { color: #ddd6fe; border-color: #5b21b6; background: #1e1438; }
+
+    .plot-card { padding: 8px 8px 10px; }
+    .plot-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 4px 6px 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .plot-title .badge {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 500;
+      background: #1a2540;
+      border: 1px solid #2c426c;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    canvas.plot {
+      width: 100%;
+      height: 200px;
+      display: block;
+      background: #091120;
+      border: 1px solid #223253;
+      border-radius: 12px;
+      touch-action: manipulation;
+    }
+    canvas.plot.tall { height: 220px; }
+    canvas.plot.short { height: 140px; }
+
+    /* Beat strip */
+    .beat-strip {
+      display: flex;
+      gap: 3px;
+      padding: 6px 4px;
+      overflow: hidden;
+      flex-wrap: wrap;
+    }
+    .beat-pip {
+      width: 12px;
+      height: 18px;
+      border-radius: 3px;
+      background: var(--normal);
+      flex-shrink: 0;
+    }
+    .beat-pip.pvc { background: var(--pvc); }
+    .beat-pip.pac { background: var(--pac); }
+    .beat-pip.abnormal { background: var(--abnormal); }
+    .beat-pip.unknown { background: #475569; }
+
+    .insight-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+    .insight-list li {
+      padding: 7px 0;
+      border-top: 1px dashed #2c3f63;
+      color: var(--muted);
+    }
+    .insight-list li:first-child { border-top: none; }
+    .insight-list li b { color: var(--text); }
+    .insight-list li.good b { color: #86efac; }
+    .insight-list li.warn b { color: #fde68a; }
+    .insight-list li.alert b { color: #fca5a5; }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      margin-top: 10px;
+    }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+    }
+
+    details.collapsible {
+      margin-top: 10px;
+      border-top: 1px solid #2c3f63;
+      padding-top: 10px;
+    }
+    details.collapsible > summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      list-style: none;
+      padding: 4px 0;
+    }
+    details.collapsible > summary::-webkit-details-marker { display: none; }
+    details.collapsible > summary::after {
+      content: ' ▾';
+      color: var(--muted);
+    }
+    details.collapsible[open] > summary::after { content: ' ▴'; }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.78rem;
+      color: var(--muted);
+      padding: 4px 6px 8px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .legend i {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      canvas.plot { height: 180px; }
+      canvas.plot.tall { height: 200px; }
+      canvas.plot.short { height: 130px; }
+      .twin-hero { grid-template-columns: auto 1fr; }
+      .twin-actions { grid-column: 1 / -1; flex-direction: row; }
+      .twin-actions button { flex: 1; min-width: 0; }
+      .twin-orb { width: 72px; height: 72px; }
+      .twin-state { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Cardiac Digital Twin</h1>
+    <div class="sub">Personalized ECG model · BLE live · MAX30003 + triboelectric pulse</div>
+
+    <!-- ====== TWIN HERO ====== -->
+    <div class="twin-hero">
+      <div id="twinOrb" class="twin-orb idle"></div>
+      <div class="twin-info">
+        <div class="twin-state-label">Twin state</div>
+        <div class="twin-state" id="twinState">Awaiting signal</div>
+        <div class="twin-divergence" id="twinDivergence">Connect device and run a 60-second baseline to seed your twin.</div>
+      </div>
+      <div class="twin-actions">
+        <button id="calibrateBtn" class="twin">Calibrate baseline</button>
+        <button id="resetTwinBtn" class="secondary">Reset twin</button>
+      </div>
+    </div>
+
+    <!-- ====== METRICS ROW ====== -->
+    <div class="card" style="margin-bottom: 12px; padding: 12px;">
+      <div class="metrics">
+        <div class="metric"><div class="k">Heart rate</div><div class="v" id="hrValue">— <span class="u">bpm</span></div><div class="delta flat" id="hrDelta">vs baseline: —</div></div>
+        <div class="metric"><div class="k">SDNN</div><div class="v" id="sdnnValue">— <span class="u">ms</span></div><div class="delta flat" id="sdnnDelta">vs baseline: —</div></div>
+        <div class="metric"><div class="k">RMSSD</div><div class="v" id="rmssdValue">— <span class="u">ms</span></div><div class="delta flat" id="rmssdDelta">vs baseline: —</div></div>
+        <div class="metric"><div class="k">pNN50</div><div class="v" id="pnn50Value">— <span class="u">%</span></div><div class="delta flat" id="pnn50Delta">vs baseline: —</div></div>
+        <div class="metric"><div class="k">LF / HF</div><div class="v" id="lfhfValue">—</div><div class="delta flat" id="lfhfDelta">autonomic balance</div></div>
+        <div class="metric"><div class="k">Beats analyzed</div><div class="v" id="beatsValue">0</div><div class="delta flat" id="beatsDelta">normal · ectopic</div></div>
+        <div class="metric"><div class="k">Twin divergence</div><div class="v" id="divergenceValue">— <span class="u">%</span></div><div class="delta flat" id="divergenceDelta">low / mid / high</div></div>
+        <div class="metric"><div class="k">PAT</div><div class="v" id="patValue">— <span class="u">ms</span></div><div class="delta flat" id="patDelta">R-peak → pulse foot</div></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- ============ LEFT: PLOTS ============ -->
+      <div>
+        <div class="card plot-card">
+          <div class="plot-title">
+            <span>ECG · live</span>
+            <span class="badge" id="ecgBadge">— sps</span>
+          </div>
+          <canvas id="ecgCanvas" class="plot tall"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--ecg)"></i> ECG signal</span>
+            <span><i style="background:var(--normal)"></i> Normal beat</span>
+            <span><i style="background:var(--pvc)"></i> PVC</span>
+            <span><i style="background:var(--pac)"></i> Premature</span>
+            <span><i style="background:var(--abnormal)"></i> Atypical morphology</span>
+          </div>
+        </div>
+
+        <div class="card plot-card" style="margin-top: 12px;">
+          <div class="plot-title">
+            <span>Beat template — your twin's reference beat</span>
+            <span class="badge" id="templateBadge">0 beats</span>
+          </div>
+          <canvas id="templateCanvas" class="plot"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--twin)"></i> Personal template</span>
+            <span><i style="background:#5aa7ff; opacity:0.4"></i> Recent beats</span>
+            <span><i style="background:#fde68a"></i> Most recent</span>
+          </div>
+        </div>
+
+        <div class="card plot-card" style="margin-top: 12px;">
+          <div class="plot-title">
+            <span>RR tachogram — beat-to-beat variability</span>
+            <span class="badge" id="rrBadge">0 RR</span>
+          </div>
+          <canvas id="rrCanvas" class="plot"></canvas>
+        </div>
+
+        <div class="card plot-card" style="margin-top: 12px;">
+          <div class="plot-title"><span>HR &amp; HRV trend</span></div>
+          <canvas id="trendCanvas" class="plot short"></canvas>
+          <div class="legend">
+            <span><i style="background:var(--rpeak)"></i> Heart rate</span>
+            <span><i style="background:var(--twin)"></i> RMSSD (HRV)</span>
+          </div>
+        </div>
+
+        <div class="card plot-card" style="margin-top: 12px;">
+          <div class="plot-title">
+            <span>PAT · R-peak → pulse foot</span>
+            <span class="badge" id="patBadge">— ms</span>
+          </div>
+          <canvas id="patCanvas" class="plot short"></canvas>
+        </div>
+
+        <div class="card plot-card" style="margin-top: 12px;">
+          <div class="plot-title">
+            <span>Triboelectric pulse · verification only</span>
+            <span class="badge" id="triboBadge">— sps</span>
+          </div>
+          <canvas id="triboCanvas" class="plot short"></canvas>
+        </div>
+      </div>
+
+      <!-- ============ RIGHT: STATUS, INSIGHTS, CONTROLS ============ -->
+      <div>
+        <div class="card">
+          <div id="status" class="status warn">Ready. Open in Chrome/Edge on a supported device, then tap Connect.</div>
+
+          <div class="row">
+            <button id="connectBtn" class="primary">Connect BLE</button>
+            <button id="reconnectBtn" class="secondary" disabled>Reconnect Last</button>
+            <button id="disconnectBtn" class="danger" disabled>Disconnect</button>
+          </div>
+          <div class="row">
+            <button id="clearBtn" class="secondary">Clear</button>
+            <button id="exportBtn" class="secondary">Export CSV</button>
+          </div>
+
+          <div class="metrics" style="grid-template-columns: 1fr 1fr;">
+            <div class="metric"><div class="k">Connection</div><div class="v" id="connectionValue">Disconnected</div></div>
+            <div class="metric"><div class="k">Device</div><div class="v mono" id="deviceValue">—</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 12px;">
+          <div class="section-title">Recent beats</div>
+          <div class="beat-strip" id="beatStrip"></div>
+          <div class="footer-note" style="margin-top: 0;">Last 80 beats · color = classification</div>
+        </div>
+
+        <div class="card" style="margin-top: 12px;">
+          <div class="section-title">Twin insights</div>
+          <ul id="insights" class="insight-list">
+            <li>Awaiting data...</li>
+          </ul>
+        </div>
+
+        <div class="card" style="margin-top: 12px;">
+          <details class="collapsible" open>
+            <summary>Display</summary>
+            <label><span>Invert ECG</span><input id="invertEcg" type="checkbox" /></label>
+            <label><span>Window (s)</span><input id="windowSec" type="number" value="6" min="1" max="60" step="1" /></label>
+          </details>
+
+          <details class="collapsible">
+            <summary>R-peak detector</summary>
+            <label><span>Threshold</span><input id="rpThresh" type="range" min="0.1" max="0.9" step="0.05" value="0.5" /><span id="rpThreshVal">0.50</span></label>
+            <label><span>Refractory (s)</span><input id="rpRefract" type="range" min="0.15" max="1.0" step="0.05" value="0.3" /><span id="rpRefractVal">0.30</span></label>
+          </details>
+
+          <details class="collapsible">
+            <summary>Pulse foot detector</summary>
+            <label><span>Slope %</span><input id="ftSlopeThresh" type="range" min="0.05" max="0.5" step="0.05" value="0.2" /><span id="ftSlopeThreshVal">0.20</span></label>
+            <label><span>Peak window (s)</span><input id="ftPeakHi" type="range" min="0.3" max="1.5" step="0.1" value="0.9" /><span id="ftPeakHiVal">0.90</span></label>
+          </details>
+
+          <details class="collapsible">
+            <summary>PAT</summary>
+            <label><span>Min (ms)</span><input id="pttMin" type="number" value="50" min="10" max="300" step="5" /></label>
+            <label><span>Max (ms)</span><input id="pttMax" type="number" value="500" min="100" max="1000" step="10" /></label>
+            <label><span>Offset (ms)</span><input id="pttOffset" type="range" min="0" max="150" step="5" value="55" /><span id="pttOffsetVal">55</span></label>
+          </details>
+
+          <details class="collapsible">
+            <summary>Twin sensitivity</summary>
+            <label><span>Morphology cutoff</span><input id="morphCutoff" type="range" min="0.6" max="0.98" step="0.01" value="0.85" /><span id="morphCutoffVal">0.85</span></label>
+            <label><span>Premature %</span><input id="prematureCutoff" type="range" min="0.7" max="0.95" step="0.01" value="0.85" /><span id="prematureCutoffVal">0.85</span></label>
+            <label><span>Baseline duration (s)</span><input id="baselineDur" type="number" value="60" min="20" max="300" step="10" /></label>
+          </details>
+
+          <details class="collapsible">
+            <summary>BLE UUIDs</summary>
+            <label><span>Service</span><input id="serviceUuid" type="text" value="cddf1000-30f7-4671-8b43-5e40ba53514a" /></label>
+            <label><span>Tribo</span><input id="triboUuid" type="text" value="cddf1002-30f7-4671-8b43-5e40ba53514a" /></label>
+            <label><span>ECG</span><input id="ecgUuid" type="text" value="cddf1004-30f7-4671-8b43-5e40ba53514a" /></label>
+          </details>
+
+          <div class="footer-note">
+            Twin learns your normal beat shape, RR statistics, and morphology distribution during baseline. After that, every incoming beat is scored against your personal reference. No data leaves the device.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // ============================================================
+    //   ELEMENT REFERENCES
+    // ============================================================
+    const els = {
+      status: document.getElementById('status'),
+      connectBtn: document.getElementById('connectBtn'),
+      reconnectBtn: document.getElementById('reconnectBtn'),
+      disconnectBtn: document.getElementById('disconnectBtn'),
+      clearBtn: document.getElementById('clearBtn'),
+      exportBtn: document.getElementById('exportBtn'),
+      calibrateBtn: document.getElementById('calibrateBtn'),
+      resetTwinBtn: document.getElementById('resetTwinBtn'),
+
+      connectionValue: document.getElementById('connectionValue'),
+      deviceValue: document.getElementById('deviceValue'),
+      ecgBadge: document.getElementById('ecgBadge'),
+      triboBadge: document.getElementById('triboBadge'),
+      patBadge: document.getElementById('patBadge'),
+      templateBadge: document.getElementById('templateBadge'),
+      rrBadge: document.getElementById('rrBadge'),
+
+      hrValue: document.getElementById('hrValue'),
+      sdnnValue: document.getElementById('sdnnValue'),
+      rmssdValue: document.getElementById('rmssdValue'),
+      pnn50Value: document.getElementById('pnn50Value'),
+      lfhfValue: document.getElementById('lfhfValue'),
+      beatsValue: document.getElementById('beatsValue'),
+      divergenceValue: document.getElementById('divergenceValue'),
+      patValue: document.getElementById('patValue'),
+
+      hrDelta: document.getElementById('hrDelta'),
+      sdnnDelta: document.getElementById('sdnnDelta'),
+      rmssdDelta: document.getElementById('rmssdDelta'),
+      pnn50Delta: document.getElementById('pnn50Delta'),
+      lfhfDelta: document.getElementById('lfhfDelta'),
+      beatsDelta: document.getElementById('beatsDelta'),
+      divergenceDelta: document.getElementById('divergenceDelta'),
+      patDelta: document.getElementById('patDelta'),
+
+      twinOrb: document.getElementById('twinOrb'),
+      twinState: document.getElementById('twinState'),
+      twinDivergence: document.getElementById('twinDivergence'),
+
+      beatStrip: document.getElementById('beatStrip'),
+      insights: document.getElementById('insights'),
+
+      invertEcg: document.getElementById('invertEcg'),
+      windowSec: document.getElementById('windowSec'),
+      serviceUuid: document.getElementById('serviceUuid'),
+      triboUuid: document.getElementById('triboUuid'),
+      ecgUuid: document.getElementById('ecgUuid'),
+
+      rpThresh: document.getElementById('rpThresh'),
+      rpThreshVal: document.getElementById('rpThreshVal'),
+      rpRefract: document.getElementById('rpRefract'),
+      rpRefractVal: document.getElementById('rpRefractVal'),
+      ftSlopeThresh: document.getElementById('ftSlopeThresh'),
+      ftSlopeThreshVal: document.getElementById('ftSlopeThreshVal'),
+      ftPeakHi: document.getElementById('ftPeakHi'),
+      ftPeakHiVal: document.getElementById('ftPeakHiVal'),
+      pttMin: document.getElementById('pttMin'),
+      pttMax: document.getElementById('pttMax'),
+      pttOffset: document.getElementById('pttOffset'),
+      pttOffsetVal: document.getElementById('pttOffsetVal'),
+      morphCutoff: document.getElementById('morphCutoff'),
+      morphCutoffVal: document.getElementById('morphCutoffVal'),
+      prematureCutoff: document.getElementById('prematureCutoff'),
+      prematureCutoffVal: document.getElementById('prematureCutoffVal'),
+      baselineDur: document.getElementById('baselineDur'),
+
+      ecgCanvas: document.getElementById('ecgCanvas'),
+      templateCanvas: document.getElementById('templateCanvas'),
+      rrCanvas: document.getElementById('rrCanvas'),
+      trendCanvas: document.getElementById('trendCanvas'),
+      patCanvas: document.getElementById('patCanvas'),
+      triboCanvas: document.getElementById('triboCanvas'),
+    };
+
+    const COLORS = {
+      grid: '#1c2a47',
+      gridSoft: '#152339',
+      axis: '#7a8eb3',
+      text: '#dfeafe',
+      tribo: '#ff6b6b',
+      ecg: '#5aa7ff',
+      pat: '#37d67a',
+      foot: '#ffd166',
+      rpeak: '#ff4d6d',
+      twin: '#a78bfa',
+      twinSoft: 'rgba(167, 139, 250, 0.5)',
+      bg: '#091120',
+      normal: '#22c55e',
+      pvc: '#ef4444',
+      pac: '#f59e0b',
+      abnormal: '#f97316',
+      unknown: '#64748b',
+    };
+
+    const CLASS_COLOR = {
+      normal: COLORS.normal,
+      pvc: COLORS.pvc,
+      pac: COLORS.pac,
+      abnormal: COLORS.abnormal,
+      unknown: COLORS.unknown,
+    };
+
+    const ECG_FS = 128;                     // sample rate (Hz)
+    const BEAT_BEFORE_MS = 200;             // window start before R
+    const BEAT_AFTER_MS = 400;              // window end after R
+    const BEAT_BEFORE_S = Math.round(BEAT_BEFORE_MS / 1000 * ECG_FS); // ~26
+    const BEAT_AFTER_S = Math.round(BEAT_AFTER_MS / 1000 * ECG_FS);   // ~51
+    const BEAT_LEN = BEAT_BEFORE_S + BEAT_AFTER_S;                    // ~77
+
+    // ============================================================
+    //   STATE
+    // ============================================================
+    const state = {
+      // BLE
+      device: null, server: null, triboChar: null, ecgChar: null,
+      isConnected: false,
+      tRxBuf: new Uint8Array(0), eRxBuf: new Uint8Array(0),
+
+      // Live ring buffers (for plotting)
+      t_x: [], t_y: [],          // tribo
+      e_x: [], e_y: [],          // ECG
+      // Persistent (for export, R-peak history, etc)
+      save_t_x: [], save_t_y: [],
+      save_e_x: [], save_e_y: [],
+      maxBuffer: 5000,
+      maxSave: 200000,
+
+      // R-peak / pulse / PAT (existing)
+      rPeaksT: [], rPeaksV: [],
+      feetT: [], feetV: [],
+      patTimes: [], patValues: [],
+      processedBeatTimes: new Set(),  // R-peak times we've already turned into beat objects
+
+      // Beats: each = { t, v[BEAT_LEN], rr, hr, class, sim }
+      beats: [],
+      maxBeats: 600,
+
+      // Personal template
+      template: null,             // Array of length BEAT_LEN
+      templateCount: 0,
+      templateMaxN: 200,
+
+      // Baseline reference
+      baseline: null,             // { hr, sdnn, rmssd, pnn50, lfHf, templateLocked }
+      baselineMode: false,
+      baselineStart: 0,
+      baselineRRBuffer: [],
+
+      // HRV
+      hrv: { hr: null, sdnn: null, rmssd: null, pnn50: null, lf: null, hf: null, lfHf: null },
+
+      // Trend (last ~10 min)
+      trendHRtimes: [], trendHRvalues: [],
+      trendRMSSDtimes: [], trendRMSSDvalues: [],
+
+      // Twin
+      twinDivergence: null,
+      twinState: 'idle',          // idle | resting | active | mild | warn | alert
+
+      // Counters
+      classCounts: { normal: 0, pvc: 0, pac: 0, abnormal: 0, unknown: 0 },
+
+      // Rate counters
+      lastRateTs: performance.now(),
+      tCountLast: 0,
+      eCountLast: 0,
+
+      // Timing
+      lastHRVCalc: 0,
+      lastFreqHRVCalc: 0,
+      lastInsightsRefresh: 0,
+      animationHandle: null,
+    };
+
+    // ============================================================
+    //   EXISTING DETECTORS (preserved)
+    // ============================================================
+    class RPeakDetector {
+      constructor() { this.thresholdFactor = 0.5; this.refractoryS = 0.3; this.windowS = 4.0; }
+      detect(times, values) {
+        if (times.length < 20) return { t: state.rPeaksT, v: state.rPeaksV };
+        const tEnd = times[times.length - 1];
+        let startIdx = 0;
+        while (startIdx < times.length && times[startIdx] < tEnd - this.windowS) startIdx++;
+        const t = times.slice(startIdx);
+        const v = values.slice(startIdx);
+        if (v.length < 10) return { t: state.rPeaksT, v: state.rPeaksV };
+        let vMin = Infinity, vMax = -Infinity, sum = 0;
+        for (const x of v) { if (x < vMin) vMin = x; if (x > vMax) vMax = x; sum += x; }
+        const vRange = vMax - vMin;
+        if (vRange < 10) return { t: state.rPeaksT, v: state.rPeaksV };
+        const vMean = sum / v.length;
+        const threshold = vMean + vRange * this.thresholdFactor;
+        const dtAvg = Math.max(1e-6, (t[t.length - 1] - t[0]) / Math.max(1, t.length - 1));
+        const minDist = Math.max(1, Math.round(this.refractoryS / dtAvg));
+        const peaksIdx = [];
+        let lastAccepted = -minDist;
+        for (let i = 1; i < v.length - 1; i++) {
+          if (v[i] > threshold && v[i] >= v[i - 1] && v[i] > v[i + 1]) {
+            if (i - lastAccepted >= minDist) {
+              peaksIdx.push(i); lastAccepted = i;
+            } else if (peaksIdx.length > 0 && v[i] > v[peaksIdx[peaksIdx.length - 1]]) {
+              peaksIdx[peaksIdx.length - 1] = i; lastAccepted = i;
+            }
+          }
+        }
+        // Build result keeping older peaks too (so we never drop history)
+        const newT = peaksIdx.map(i => t[i]);
+        const newV = peaksIdx.map(i => v[i]);
+        // Merge: keep state.rPeaksT entries older than window start
+        const cutoff = tEnd - this.windowS;
+        const keptT = [], keptV = [];
+        for (let i = 0; i < state.rPeaksT.length; i++) {
+          if (state.rPeaksT[i] < cutoff) {
+            keptT.push(state.rPeaksT[i]);
+            keptV.push(state.rPeaksV[i]);
+          }
+        }
+        state.rPeaksT = keptT.concat(newT);
+        state.rPeaksV = keptV.concat(newV);
+        // Cap history
+        const maxKeep = 4000;
+        if (state.rPeaksT.length > maxKeep) {
+          state.rPeaksT = state.rPeaksT.slice(-maxKeep);
+          state.rPeaksV = state.rPeaksV.slice(-maxKeep);
+        }
+        return { t: state.rPeaksT, v: state.rPeaksV };
+      }
+    }
+
+    class PulseFootDetector {
+      constructor() { this.slopeThresh = 0.2; this.peakLoS = 0.10; this.peakHiS = 0.90; this.backS = 0.50; }
+      gradient(t, v) {
+        const dy = new Array(v.length).fill(0);
+        if (v.length < 2) return dy;
+        dy[0] = (v[1] - v[0]) / Math.max(1e-9, t[1] - t[0]);
+        for (let i = 1; i < v.length - 1; i++) {
+          dy[i] = (v[i + 1] - v[i - 1]) / Math.max(1e-9, t[i + 1] - t[i - 1]);
+        }
+        const n = v.length - 1;
+        dy[n] = (v[n] - v[n - 1]) / Math.max(1e-9, t[n] - t[n - 1]);
+        return dy;
+      }
+      detect(t, v, rPeakTimes) {
+        if (t.length < 20 || !rPeakTimes.length) return { t: state.feetT, v: state.feetV };
+        const dy = this.gradient(t, v);
+        const newFeetT = []; const newFeetV = [];
+        for (const rt of rPeakTimes) {
+          const idx = [];
+          for (let i = 0; i < t.length; i++) {
+            if (t[i] >= rt + this.peakLoS && t[i] <= rt + this.peakHiS) idx.push(i);
+          }
+          if (idx.length < 5) continue;
+          let p = idx[0];
+          for (const i of idx) if (v[i] > v[p]) p = i;
+          const pt = t[p];
+          const idxb = [];
+          const tLo = Math.max(rt, pt - this.backS);
+          for (let i = 0; i < t.length; i++) { if (t[i] >= tLo && t[i] < pt) idxb.push(i); }
+          if (idxb.length < 5) continue;
+          let imax = idxb[0]; let maxSlope = -Infinity;
+          for (const i of idxb) { if (dy[i] > maxSlope) { maxSlope = dy[i]; imax = i; } }
+          if (!(maxSlope > 0)) continue;
+          const thr = this.slopeThresh * maxSlope;
+          let f = null;
+          for (const k of idxb) {
+            if (t[k] >= t[imax]) break;
+            if (dy[k] >= thr) { f = k; break; }
+          }
+          if (f === null) continue;
+          newFeetT.push(t[f]); newFeetV.push(v[f]);
+        }
+        state.feetT = newFeetT; state.feetV = newFeetV;
+        return { t: state.feetT, v: state.feetV };
+      }
+    }
+
+    class PTTCalculator {
+      constructor() { this.minPttMs = 50; this.maxPttMs = 500; this.offsetMs = 55; }
+      compute(rPeakTimes, footTimes) {
+        if (!rPeakTimes.length || !footTimes.length) return { t: state.patTimes, v: state.patValues };
+        const newT = []; const newV = [];
+        for (const ft of footTimes) {
+          let prev = null;
+          for (let i = 0; i < rPeakTimes.length; i++) {
+            if (rPeakTimes[i] < ft) prev = rPeakTimes[i]; else break;
+          }
+          if (prev === null) continue;
+          const pttMs = (ft - prev) * 1000 + this.offsetMs;
+          if (pttMs >= this.minPttMs && pttMs <= this.maxPttMs) {
+            newT.push(ft); newV.push(pttMs);
+          }
+        }
+        state.patTimes = newT; state.patValues = newV;
+        return { t: state.patTimes, v: state.patValues };
+      }
+    }
+
+    const rpeak = new RPeakDetector();
+    const foot = new PulseFootDetector();
+    const ptt = new PTTCalculator();
+
+    // ============================================================
+    //   NEW: BEAT EXTRACTION + TEMPLATE
+    // ============================================================
+    function findClosestIndex(arr, target) {
+      // arr is ascending. Returns index closest to target, or -1 if empty.
+      if (!arr.length) return -1;
+      let lo = 0, hi = arr.length - 1;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (arr[mid] < target) lo = mid + 1; else hi = mid;
+      }
+      // lo = first idx where arr[lo] >= target. Compare with lo-1.
+      if (lo > 0 && Math.abs(arr[lo - 1] - target) < Math.abs(arr[lo] - target)) lo = lo - 1;
+      return lo;
+    }
+
+    function extractBeat(rPeakTime) {
+      const ex = state.save_e_x;
+      const ey = state.save_e_y;
+      if (ex.length < BEAT_LEN) return null;
+      const rIdx = findClosestIndex(ex, rPeakTime);
+      if (rIdx < 0) return null;
+      const start = rIdx - BEAT_BEFORE_S;
+      const end = rIdx + BEAT_AFTER_S;
+      if (start < 0 || end > ex.length) return null;
+      const beat = new Array(BEAT_LEN);
+      for (let i = 0; i < BEAT_LEN; i++) beat[i] = ey[start + i];
+      // Baseline-correct: subtract mean of first 10 samples (PR segment area)
+      let base = 0;
+      for (let i = 0; i < 10; i++) base += beat[i];
+      base /= 10;
+      for (let i = 0; i < BEAT_LEN; i++) beat[i] -= base;
+      // Normalize amplitude by R-peak magnitude (so morphology, not gain, drives similarity)
+      const rPeakAbs = Math.abs(beat[BEAT_BEFORE_S]) || 1;
+      for (let i = 0; i < BEAT_LEN; i++) beat[i] /= rPeakAbs;
+      return beat;
+    }
+
+    function updateTemplate(beat) {
+      if (!state.template) {
+        state.template = beat.slice();
+        state.templateCount = 1;
+        return;
+      }
+      const n = Math.min(state.templateCount + 1, state.templateMaxN);
+      const alpha = 1 / n;
+      for (let i = 0; i < BEAT_LEN; i++) {
+        state.template[i] = (1 - alpha) * state.template[i] + alpha * beat[i];
+      }
+      state.templateCount++;
+    }
+
+    function beatSimilarity(beat) {
+      if (!state.template) return null;
+      const a = state.template;
+      const b = beat;
+      let m1 = 0, m2 = 0;
+      for (let i = 0; i < BEAT_LEN; i++) { m1 += a[i]; m2 += b[i]; }
+      m1 /= BEAT_LEN; m2 /= BEAT_LEN;
+      let num = 0, d1 = 0, d2 = 0;
+      for (let i = 0; i < BEAT_LEN; i++) {
+        const x = a[i] - m1;
+        const y = b[i] - m2;
+        num += x * y; d1 += x * x; d2 += y * y;
+      }
+      const den = Math.sqrt(d1 * d2);
+      return den > 0 ? num / den : 0;
+    }
+
+    function classifyBeat(rt, prevRR, simScore) {
+      const morphCut = Number(els.morphCutoff.value);
+      const prematureCut = Number(els.prematureCutoff.value);
+      const recentRRs = state.beats.slice(-8).map(b => b.rr).filter(x => x);
+      const meanRR = recentRRs.length ? recentRRs.reduce((a, b) => a + b, 0) / recentRRs.length : null;
+      const rr = prevRR;
+      const isPremature = (meanRR !== null && rr !== null && rr < meanRR * prematureCut);
+      const isAbnormalMorph = (simScore !== null && simScore < morphCut);
+      if (simScore === null) return 'unknown';
+      if (isPremature && isAbnormalMorph) return 'pvc';
+      if (isPremature) return 'pac';
+      if (isAbnormalMorph) return 'abnormal';
+      return 'normal';
+    }
+
+    function processNewBeats() {
+      // Look at R-peaks newer than what we've already processed.
+      for (let i = 0; i < state.rPeaksT.length; i++) {
+        const rt = state.rPeaksT[i];
+        if (state.processedBeatTimes.has(rt)) continue;
+
+        const beat = extractBeat(rt);
+        if (!beat) continue;
+
+        // Compute RR from previous R-peak
+        let rr = null;
+        if (i > 0) rr = (rt - state.rPeaksT[i - 1]) * 1000;
+
+        // Similarity vs current template (if any)
+        const sim = beatSimilarity(beat);
+
+        // Classify
+        const cls = classifyBeat(rt, rr, sim);
+
+        // Build beat record
+        const rec = {
+          t: rt,
+          v: beat,
+          rr: rr,
+          hr: rr ? 60000 / rr : null,
+          cls: cls,
+          sim: sim,
+        };
+
+        // Update template only with normal-looking beats (don't poison it)
+        // During baseline mode, accept all beats (even before classification is confident)
+        const accept = state.baselineMode ||
+          (cls === 'normal' && rr !== null && rr > 400 && rr < 1500);
+        if (accept) updateTemplate(beat);
+
+        // Push, classify counts
+        state.beats.push(rec);
+        state.classCounts[cls] = (state.classCounts[cls] || 0) + 1;
+
+        if (state.beats.length > state.maxBeats) {
+          state.beats.shift();
+        }
+
+        state.processedBeatTimes.add(rt);
+      }
+
+      // Cleanup processed set (drop very old entries)
+      if (state.processedBeatTimes.size > 5000) {
+        const tEnd = state.e_x.length ? state.e_x[state.e_x.length - 1] : 0;
+        const drop = [];
+        for (const t of state.processedBeatTimes) if (t < tEnd - 600) drop.push(t);
+        for (const t of drop) state.processedBeatTimes.delete(t);
+      }
+    }
+
+    // ============================================================
+    //   HRV: TIME DOMAIN
+    // ============================================================
+    function filterArtifactRR(rrSeries) {
+      // Remove RRs that jump more than 30% from local median.
+      const out = [];
+      for (let i = 0; i < rrSeries.length; i++) {
+        const w = rrSeries.slice(Math.max(0, i - 4), Math.min(rrSeries.length, i + 5));
+        const sorted = w.slice().sort((a, b) => a - b);
+        const med = sorted[Math.floor(sorted.length / 2)];
+        if (rrSeries[i] > 0.7 * med && rrSeries[i] < 1.3 * med && rrSeries[i] > 300 && rrSeries[i] < 2000) {
+          out.push(rrSeries[i]);
+        }
+      }
+      return out;
+    }
+
+    function computeHRVTime(rrSeries) {
+      if (rrSeries.length < 5) return null;
+      const nn = filterArtifactRR(rrSeries);
+      if (nn.length < 5) return null;
+      const mean = nn.reduce((a, b) => a + b, 0) / nn.length;
+      let varSum = 0;
+      for (const x of nn) varSum += (x - mean) * (x - mean);
+      const sdnn = Math.sqrt(varSum / nn.length);
+      let sumSq = 0; let nn50 = 0;
+      for (let i = 1; i < nn.length; i++) {
+        const d = nn[i] - nn[i - 1];
+        sumSq += d * d;
+        if (Math.abs(d) > 50) nn50++;
+      }
+      const rmssd = Math.sqrt(sumSq / Math.max(1, nn.length - 1));
+      const pnn50 = (nn50 / Math.max(1, nn.length - 1)) * 100;
+      return { meanRR: mean, hr: 60000 / mean, sdnn, rmssd, pnn50, n: nn.length };
+    }
+
+    // ============================================================
+    //   HRV: FREQUENCY DOMAIN (radix-2 FFT, resampled RR)
+    // ============================================================
+    function fftInPlace(re, im) {
+      const n = re.length;
+      if (n <= 1) return;
+      // Bit reverse
+      let j = 0;
+      for (let i = 1; i < n; i++) {
+        let bit = n >> 1;
+        for (; j & bit; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) {
+          [re[i], re[j]] = [re[j], re[i]];
+          [im[i], im[j]] = [im[j], im[i]];
+        }
+      }
+      for (let len = 2; len <= n; len <<= 1) {
+        const ang = -2 * Math.PI / len;
+        const wlre = Math.cos(ang); const wlim = Math.sin(ang);
+        for (let i = 0; i < n; i += len) {
+          let wre = 1, wim = 0;
+          for (let k = 0; k < len / 2; k++) {
+            const u_r = re[i + k]; const u_i = im[i + k];
+            const v_r = re[i + k + len / 2] * wre - im[i + k + len / 2] * wim;
+            const v_i = re[i + k + len / 2] * wim + im[i + k + len / 2] * wre;
+            re[i + k] = u_r + v_r; im[i + k] = u_i + v_i;
+            re[i + k + len / 2] = u_r - v_r; im[i + k + len / 2] = u_i - v_i;
+            const nw_r = wre * wlre - wim * wlim;
+            const nw_i = wre * wlim + wim * wlre;
+            wre = nw_r; wim = nw_i;
+          }
+        }
+      }
+    }
+
+    function nextPow2(n) { let p = 1; while (p < n) p <<= 1; return p; }
+
+    function computeHRVFreq(rPeakTimes) {
+      // Need at least ~120 s of RR data
+      if (rPeakTimes.length < 60) return null;
+      const tStart = rPeakTimes[0];
+      const tEnd = rPeakTimes[rPeakTimes.length - 1];
+      if (tEnd - tStart < 90) return null;
+
+      // Build RR series at each peak time (after the first)
+      const rTimes = []; const rrSer = [];
+      for (let i = 1; i < rPeakTimes.length; i++) {
+        const rr = (rPeakTimes[i] - rPeakTimes[i - 1]) * 1000;
+        if (rr > 300 && rr < 2000) {
+          rTimes.push(rPeakTimes[i]); rrSer.push(rr);
+        }
+      }
+      if (rrSer.length < 30) return null;
+
+      // Resample to 4 Hz uniform
+      const fs = 4;
+      const t0 = rTimes[0]; const t1 = rTimes[rTimes.length - 1];
+      const N = Math.floor((t1 - t0) * fs);
+      if (N < 64) return null;
+      const Npad = nextPow2(N);
+      const re = new Array(Npad).fill(0);
+      const im = new Array(Npad).fill(0);
+
+      let j = 0;
+      for (let i = 0; i < N; i++) {
+        const t = t0 + i / fs;
+        while (j < rTimes.length - 1 && rTimes[j + 1] < t) j++;
+        // linear interpolation
+        let v;
+        if (j >= rTimes.length - 1) v = rrSer[rrSer.length - 1];
+        else {
+          const t1_ = rTimes[j]; const t2_ = rTimes[j + 1];
+          const v1 = rrSer[j]; const v2 = rrSer[j + 1];
+          const frac = (t - t1_) / Math.max(1e-9, t2_ - t1_);
+          v = v1 + (v2 - v1) * frac;
+        }
+        re[i] = v;
+      }
+      // Detrend (remove mean)
+      let m = 0; for (let i = 0; i < N; i++) m += re[i]; m /= N;
+      for (let i = 0; i < N; i++) re[i] -= m;
+      // Hann window
+      for (let i = 0; i < N; i++) {
+        const w = 0.5 * (1 - Math.cos(2 * Math.PI * i / (N - 1)));
+        re[i] *= w;
+      }
+
+      fftInPlace(re, im);
+
+      let lf = 0, hf = 0;
+      const half = Npad / 2;
+      for (let i = 1; i < half; i++) {
+        const f = i * fs / Npad;
+        const p = re[i] * re[i] + im[i] * im[i];
+        if (f >= 0.04 && f < 0.15) lf += p;
+        else if (f >= 0.15 && f < 0.4) hf += p;
+      }
+      return { lf, hf, lfHf: hf > 0 ? lf / hf : 0 };
+    }
+
+    // ============================================================
+    //   TWIN STATE / DIVERGENCE
+    // ============================================================
+    function relDiff(now, base) {
+      if (base == null || base === 0 || now == null) return 0;
+      return (now - base) / base;
+    }
+
+    function computeDivergence() {
+      // Composite 0..100 score: how unlike the baseline twin we currently are.
+      if (!state.baseline) return null;
+      const b = state.baseline;
+      const h = state.hrv;
+      let parts = [];
+
+      // HR deviation (clamped at 50% change = full score)
+      if (h.hr != null && b.hr != null) parts.push(Math.min(1, Math.abs(relDiff(h.hr, b.hr)) / 0.5));
+      // RMSSD deviation (HRV depression matters more than elevation)
+      if (h.rmssd != null && b.rmssd != null) {
+        const r = relDiff(h.rmssd, b.rmssd);
+        parts.push(Math.min(1, Math.abs(r) / 0.6));
+      }
+      // SDNN deviation
+      if (h.sdnn != null && b.sdnn != null) parts.push(Math.min(1, Math.abs(relDiff(h.sdnn, b.sdnn)) / 0.6));
+      // Morphology divergence: average (1 - sim) of last 30 beats
+      const recent = state.beats.slice(-30);
+      const sims = recent.map(x => x.sim).filter(x => x != null);
+      if (sims.length >= 5) {
+        const meanSim = sims.reduce((a, b) => a + b, 0) / sims.length;
+        parts.push(Math.min(1, Math.max(0, (1 - meanSim) * 2)));
+      }
+      // Ectopic burden (last 60 beats)
+      const last = state.beats.slice(-60);
+      if (last.length >= 20) {
+        const ect = last.filter(b => b.cls === 'pvc' || b.cls === 'pac' || b.cls === 'abnormal').length;
+        parts.push(Math.min(1, ect / last.length / 0.2));   // 20% ectopic = full
+      }
+
+      if (!parts.length) return null;
+      const score = parts.reduce((a, b) => a + b, 0) / parts.length;
+      return Math.round(score * 100);
+    }
+
+    function inferState() {
+      if (!state.baseline || state.hrv.hr == null) return 'idle';
+      const h = state.hrv;
+      const b = state.baseline;
+      const hrRel = relDiff(h.hr, b.hr);
+      const rmssdRel = h.rmssd != null && b.rmssd ? relDiff(h.rmssd, b.rmssd) : 0;
+
+      // Recent ectopic count
+      const last60 = state.beats.slice(-60);
+      const ectRate = last60.length ? last60.filter(b => b.cls !== 'normal' && b.cls !== 'unknown').length / last60.length : 0;
+
+      if (ectRate > 0.15) return 'alert';
+      if (Math.abs(hrRel) > 0.3 || ectRate > 0.05) return 'warn';
+      if (hrRel > 0.15) return 'active';
+      if (rmssdRel < -0.4 && hrRel > 0.05) return 'mild';   // possible stress
+      return 'resting';
+    }
+
+    function stateLabel(s) {
+      return ({
+        idle: 'Awaiting signal',
+        resting: 'Resting · in range',
+        active: 'Active / elevated HR',
+        mild: 'Mildly stressed',
+        warn: 'Watch · deviation detected',
+        alert: 'Alert · significant divergence',
+      })[s] || s;
+    }
+
+    function orbClass(s) {
+      if (s === 'idle') return 'idle';
+      if (s === 'alert') return 'alert';
+      if (s === 'warn' || s === 'mild') return 'warn';
+      return '';
+    }
+
+    // ============================================================
+    //   BLE  (preserved)
+    // ============================================================
+    const LAST_DEVICE_NAME_KEY = 'ble_last_device_name';
+    function isAllowedDeviceName(name) {
+      const n = String(name || '').trim().toLowerCase();
+      return n.startsWith('feather') || n.startsWith('anna');
+    }
+    function getLastDeviceName() {
+      try { return localStorage.getItem(LAST_DEVICE_NAME_KEY) || ''; } catch { return ''; }
+    }
+    function saveLastDeviceName(name) {
+      if (!name || !isAllowedDeviceName(name)) return;
+      try { localStorage.setItem(LAST_DEVICE_NAME_KEY, name); } catch {}
+      refreshReconnectButton();
+    }
+    function refreshReconnectButton() {
+      const lastName = getLastDeviceName();
+      els.reconnectBtn.disabled = !lastName || state.isConnected;
+      els.reconnectBtn.textContent = lastName ? `Reconnect ${lastName}` : 'Reconnect Last';
+    }
+    function getBleRequestOptions(serviceUuid) {
+      return {
+        filters: [
+          { namePrefix: 'feather' }, { namePrefix: 'Feather' }, { namePrefix: 'FEATHER' },
+          { namePrefix: 'anna' }, { namePrefix: 'Anna' }, { namePrefix: 'ANNA' }
+        ],
+        optionalServices: [serviceUuid]
+      };
+    }
+
+    function setStatus(text, kind = 'warn') {
+      els.status.textContent = text;
+      els.status.className = `status ${kind}`;
+    }
+    function setConnectedUI(connected, name = '—') {
+      state.isConnected = connected;
+      els.connectionValue.textContent = connected ? 'Connected' : 'Disconnected';
+      els.deviceValue.textContent = name || '—';
+      els.connectBtn.disabled = connected;
+      els.disconnectBtn.disabled = !connected;
+      refreshReconnectButton();
+    }
+    function appendLimited(xArr, yArr, x, y, maxLen = state.maxBuffer) {
+      xArr.push(x); yArr.push(y);
+      if (xArr.length > maxLen) {
+        xArr.splice(0, xArr.length - maxLen);
+        yArr.splice(0, yArr.length - maxLen);
+      }
+    }
+    function concatUint8(a, b) {
+      const out = new Uint8Array(a.length + b.length);
+      out.set(a, 0); out.set(b, a.length);
+      return out;
+    }
+    function readTriboFrame(frame) {
+      const dv = new DataView(frame.buffer, frame.byteOffset, frame.byteLength);
+      const t0 = dv.getFloat32(0, true);
+      for (let i = 0; i < 10; i++) {
+        const value = dv.getFloat32(4 + i * 4, true);
+        const t = t0 + i * 0.008;
+        appendLimited(state.t_x, state.t_y, t, value);
+        state.save_t_x.push(t); state.save_t_y.push(value);
+        if (state.save_t_x.length > state.maxSave) {
+          state.save_t_x.splice(0, state.save_t_x.length - state.maxSave);
+          state.save_t_y.splice(0, state.save_t_y.length - state.maxSave);
+        }
+      }
+    }
+    function readEcgFrame(frame) {
+      const dv = new DataView(frame.buffer, frame.byteOffset, frame.byteLength);
+      const t0 = dv.getFloat32(0, true);
+      for (let i = 0; i < 10; i++) {
+        let value = dv.getInt32(4 + i * 4, true);
+        if (els.invertEcg.checked) value = -value;
+        const t = t0 + i * (1 / ECG_FS);
+        appendLimited(state.e_x, state.e_y, t, value);
+        state.save_e_x.push(t); state.save_e_y.push(value);
+        if (state.save_e_x.length > state.maxSave) {
+          state.save_e_x.splice(0, state.save_e_x.length - state.maxSave);
+          state.save_e_y.splice(0, state.save_e_y.length - state.maxSave);
+        }
+      }
+    }
+    function onTriboNotification(event) {
+      const incoming = new Uint8Array(event.target.value.buffer.slice(0));
+      state.tRxBuf = concatUint8(state.tRxBuf, incoming);
+      while (state.tRxBuf.length >= 44) {
+        const frame = state.tRxBuf.slice(0, 44);
+        state.tRxBuf = state.tRxBuf.slice(44);
+        readTriboFrame(frame);
+      }
+    }
+    function onEcgNotification(event) {
+      const incoming = new Uint8Array(event.target.value.buffer.slice(0));
+      state.eRxBuf = concatUint8(state.eRxBuf, incoming);
+      while (state.eRxBuf.length >= 44) {
+        const frame = state.eRxBuf.slice(0, 44);
+        state.eRxBuf = state.eRxBuf.slice(44);
+        readEcgFrame(frame);
+      }
+    }
+
+    async function connectToDevice(device) {
+      if (!device) throw new Error('No BLE device selected.');
+      if (!isAllowedDeviceName(device.name)) {
+        throw new Error(`Device "${device.name || 'Unnamed'}" is not allowed. Use a name starting with feather or anna.`);
+      }
+      const serviceUuid = els.serviceUuid.value.trim();
+      const triboUuid = els.triboUuid.value.trim();
+      const ecgUuid = els.ecgUuid.value.trim();
+      if (state.device && state.device !== device) {
+        try { state.device.removeEventListener('gattserverdisconnected', handleDisconnected); } catch {}
+      }
+      state.device = device;
+      state.device.removeEventListener('gattserverdisconnected', handleDisconnected);
+      state.device.addEventListener('gattserverdisconnected', handleDisconnected);
+      setStatus(`Connecting to ${device.name || 'BLE device'}...`, 'warn');
+      state.server = await device.gatt.connect();
+      const service = await state.server.getPrimaryService(serviceUuid);
+      state.triboChar = await service.getCharacteristic(triboUuid);
+      state.triboChar.removeEventListener('characteristicvaluechanged', onTriboNotification);
+      state.triboChar.addEventListener('characteristicvaluechanged', onTriboNotification);
+      await state.triboChar.startNotifications();
+      try {
+        state.ecgChar = await service.getCharacteristic(ecgUuid);
+        state.ecgChar.removeEventListener('characteristicvaluechanged', onEcgNotification);
+        state.ecgChar.addEventListener('characteristicvaluechanged', onEcgNotification);
+        await state.ecgChar.startNotifications();
+      } catch (err) {
+        console.warn('ECG characteristic unavailable:', err);
+        state.ecgChar = null;
+      }
+      saveLastDeviceName(device.name || '');
+      setConnectedUI(true, device.name || 'Unnamed BLE device');
+      setStatus('Connected.', 'ok');
+    }
+
+    async function connectBle() {
+      if (!navigator.bluetooth) {
+        setStatus('This browser does not expose Web Bluetooth.', 'err'); return;
+      }
+      try {
+        const serviceUuid = els.serviceUuid.value.trim();
+        setStatus('Opening BLE device chooser...', 'warn');
+        const device = await navigator.bluetooth.requestDevice(getBleRequestOptions(serviceUuid));
+        await connectToDevice(device);
+      } catch (err) {
+        console.error(err);
+        setConnectedUI(false);
+        setStatus(`Connection failed: ${err.message || err}`, 'err');
+      }
+    }
+    async function reconnectLastDevice() {
+      const lastName = getLastDeviceName();
+      if (!lastName) { setStatus('No previously connected device has been saved yet.', 'warn'); return; }
+      try {
+        let device = null;
+        if (state.device && state.device.name === lastName) device = state.device;
+        else if (navigator.bluetooth.getDevices) {
+          setStatus(`Looking for saved device "${lastName}"...`, 'warn');
+          const devices = await navigator.bluetooth.getDevices();
+          device = devices.find(d => d.name === lastName);
+        } else {
+          setStatus('This browser cannot manually re-open previously granted BLE devices. Use Connect BLE.', 'warn');
+          return;
+        }
+        if (!device) {
+          setStatus(`Saved device "${lastName}" not found. Use Connect BLE and select it again once.`, 'warn');
+          return;
+        }
+        await connectToDevice(device);
+      } catch (err) {
+        console.error(err);
+        setConnectedUI(false);
+        setStatus(`Reconnect failed: ${err.message || err}`, 'err');
+      }
+    }
+    async function disconnectBle() {
+      try {
+        if (state.triboChar) {
+          try { await state.triboChar.stopNotifications(); } catch {}
+          state.triboChar.removeEventListener('characteristicvaluechanged', onTriboNotification);
+        }
+        if (state.ecgChar) {
+          try { await state.ecgChar.stopNotifications(); } catch {}
+          state.ecgChar.removeEventListener('characteristicvaluechanged', onEcgNotification);
+        }
+        if (state.device?.gatt?.connected) state.device.gatt.disconnect();
+      } finally { handleDisconnected(); }
+    }
+    function handleDisconnected() {
+      setConnectedUI(false);
+      setStatus('Disconnected.', 'warn');
+      state.server = null; state.triboChar = null; state.ecgChar = null;
+    }
+
+    // ============================================================
+    //   ACTIONS
+    // ============================================================
+    function clearData() {
+      state.tRxBuf = new Uint8Array(0);
+      state.eRxBuf = new Uint8Array(0);
+      const keys = ['t_x','t_y','e_x','e_y','save_t_x','save_t_y','save_e_x','save_e_y',
+                    'rPeaksT','rPeaksV','feetT','feetV','patTimes','patValues',
+                    'beats','trendHRtimes','trendHRvalues','trendRMSSDtimes','trendRMSSDvalues'];
+      for (const k of keys) state[k] = [];
+      state.processedBeatTimes = new Set();
+      state.classCounts = { normal: 0, pvc: 0, pac: 0, abnormal: 0, unknown: 0 };
+      state.hrv = { hr: null, sdnn: null, rmssd: null, pnn50: null, lf: null, hf: null, lfHf: null };
+      state.twinDivergence = null;
+      els.patValue.innerHTML = '— <span class="u">ms</span>';
+      setStatus(state.isConnected ? 'Connected. Buffers cleared.' : 'Ready. Buffers cleared.', state.isConnected ? 'ok' : 'warn');
+    }
+
+    function startCalibration() {
+      if (!state.isConnected) {
+        setStatus('Connect a device before calibrating.', 'warn');
+        return;
+      }
+      const dur = Number(els.baselineDur.value) || 60;
+      state.baselineMode = true;
+      state.baselineStart = state.e_x.length ? state.e_x[state.e_x.length - 1] : 0;
+      state.baselineRRBuffer = [];
+      // Reset template so calibration builds it fresh
+      state.template = null;
+      state.templateCount = 0;
+      // Clear processed beats so all incoming beats during calibration go into template
+      state.processedBeatTimes = new Set();
+      state.beats = [];
+      state.classCounts = { normal: 0, pvc: 0, pac: 0, abnormal: 0, unknown: 0 };
+      setStatus(`Calibrating baseline · stay still for ${dur}s`, 'twin');
+    }
+
+    function finalizeCalibration() {
+      const rrAll = [];
+      for (let i = 1; i < state.rPeaksT.length; i++) {
+        const rr = (state.rPeaksT[i] - state.rPeaksT[i - 1]) * 1000;
+        if (rr > 300 && rr < 2000) rrAll.push(rr);
+      }
+      const hrv = computeHRVTime(rrAll);
+      if (!hrv) {
+        setStatus('Baseline incomplete · not enough beats. Try again.', 'warn');
+        state.baselineMode = false;
+        return;
+      }
+      state.baseline = {
+        hr: hrv.hr,
+        sdnn: hrv.sdnn,
+        rmssd: hrv.rmssd,
+        pnn50: hrv.pnn50,
+        templateLocked: true,
+        startedAt: Date.now(),
+        beats: state.templateCount,
+      };
+      state.baselineMode = false;
+      setStatus(`Twin baseline locked · HR ${hrv.hr.toFixed(0)} bpm, RMSSD ${hrv.rmssd.toFixed(0)} ms, ${state.templateCount} beats`, 'ok');
+    }
+
+    function resetTwin() {
+      state.template = null;
+      state.templateCount = 0;
+      state.baseline = null;
+      state.baselineMode = false;
+      state.beats = [];
+      state.processedBeatTimes = new Set();
+      state.classCounts = { normal: 0, pvc: 0, pac: 0, abnormal: 0, unknown: 0 };
+      state.twinDivergence = null;
+      state.trendHRtimes = []; state.trendHRvalues = [];
+      state.trendRMSSDtimes = []; state.trendRMSSDvalues = [];
+      setStatus('Twin reset. Run Calibrate to seed a new baseline.', 'twin');
+    }
+
+    function exportCsv() {
+      if (!state.save_t_x.length && !state.save_e_x.length) {
+        setStatus('No data to export.', 'warn'); return;
+      }
+      const timeSet = new Set();
+      const td = new Map(); const ed = new Map();
+      for (let i = 0; i < state.save_t_x.length; i++) {
+        const tr = state.save_t_x[i].toFixed(6);
+        timeSet.add(tr); td.set(tr, state.save_t_y[i]);
+      }
+      for (let i = 0; i < state.save_e_x.length; i++) {
+        const tr = state.save_e_x[i].toFixed(6);
+        timeSet.add(tr); ed.set(tr, state.save_e_y[i]);
+      }
+      const rpSet = new Set(state.rPeaksT.map(t => t.toFixed(4)));
+      const ftSet = new Set(state.feetT.map(t => t.toFixed(4)));
+      const ptMap = new Map(state.patTimes.map((t, i) => [t.toFixed(4), state.patValues[i]]));
+      // Beat classifications by time
+      const beatClsMap = new Map(state.beats.map(b => [b.t.toFixed(4), b.cls]));
+      const beatSimMap = new Map(state.beats.map(b => [b.t.toFixed(4), b.sim]));
+      const lines = ['Time,Tribo_V,ECG_Raw,R_Peak,Pulse_Foot,PAT_ms,Beat_Class,Beat_Sim'];
+      Array.from(timeSet).sort((a, b) => parseFloat(a) - parseFloat(b)).forEach(t => {
+        const t4 = Number(t).toFixed(4);
+        const rp = rpSet.has(t4) ? '1' : '';
+        const pf = ftSet.has(t4) ? '1' : '';
+        const pt = ptMap.has(t4) ? ptMap.get(t4) : '';
+        const cls = beatClsMap.has(t4) ? beatClsMap.get(t4) : '';
+        const sim = beatSimMap.has(t4) ? (beatSimMap.get(t4) ?? '').toString().slice(0, 6) : '';
+        lines.push(`${t},${td.get(t) ?? ''},${ed.get(t) ?? ''},${rp},${pf},${pt},${cls},${sim}`);
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      a.href = url; a.download = `twin_export_${ts}.csv`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setStatus('CSV exported.', 'ok');
+    }
+
+    // ============================================================
+    //   PLOT HELPERS
+    // ============================================================
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function filterWindow(times, values, xMin) {
+      let start = 0;
+      while (start < times.length && times[start] < xMin) start++;
+      return { t: times.slice(start), v: values.slice(start) };
+    }
+    function getRange(values, fallbackLo, fallbackHi, padFrac, minPad) {
+      if (!values.length) return [fallbackLo, fallbackHi];
+      let lo = Infinity, hi = -Infinity;
+      for (const x of values) { if (x < lo) lo = x; if (x > hi) hi = x; }
+      const pad = Math.max((hi - lo) * padFrac, minPad);
+      return [lo - pad, hi + pad];
+    }
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const cssW = rect.width || 600;
+      const cssH = rect.height || 200;
+      const needResize = canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr);
+      if (needResize) { canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr); }
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: cssW, h: cssH };
+    }
+    function drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, yLabel) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = COLORS.bg;
+      ctx.fillRect(0, 0, w, h);
+      const left = 44, right = 8, top = 8, bottom = 22;
+      const pw = w - left - right;
+      const ph = h - top - bottom;
+      ctx.strokeStyle = COLORS.gridSoft;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i <= 4; i++) {
+        const y = top + (ph * i) / 4;
+        ctx.moveTo(left, y); ctx.lineTo(left + pw, y);
+      }
+      for (let i = 0; i <= 5; i++) {
+        const x = left + (pw * i) / 5;
+        ctx.moveTo(x, top); ctx.lineTo(x, top + ph);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = COLORS.axis;
+      ctx.beginPath();
+      ctx.moveTo(left, top); ctx.lineTo(left, top + ph);
+      ctx.lineTo(left + pw, top + ph); ctx.stroke();
+      ctx.fillStyle = COLORS.axis;
+      ctx.font = '11px system-ui, sans-serif';
+      ctx.fillText(yMax.toFixed(0), 4, top + 9);
+      ctx.fillText(yMin.toFixed(0), 4, top + ph);
+      if (yLabel) ctx.fillText(yLabel, 4, 14);
+      ctx.fillText(xMin.toFixed(1), left, h - 5);
+      const endLabel = xMax.toFixed(1);
+      ctx.fillText(endLabel, left + pw - ctx.measureText(endLabel).width, h - 5);
+      return {
+        left, right, top, bottom, pw, ph,
+        xMap: x => left + ((x - xMin) / Math.max(1e-9, xMax - xMin)) * pw,
+        yMap: y => top + (1 - (y - yMin) / Math.max(1e-9, yMax - yMin)) * ph,
+      };
+    }
+    function drawLineSeries(ctx, t, v, map, color, lineWidth = 1.4, alpha = 1.0) {
+      if (t.length < 2) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(map.xMap(t[0]), map.yMap(v[0]));
+      for (let i = 1; i < t.length; i++) ctx.lineTo(map.xMap(t[i]), map.yMap(v[i]));
+      ctx.stroke();
+      ctx.restore();
+    }
+    function drawColoredMarkers(ctx, t, v, colors, map, radius = 4) {
+      for (let i = 0; i < t.length; i++) {
+        const x = map.xMap(t[i]);
+        const y = map.yMap(v[i]);
+        ctx.fillStyle = colors[i] || COLORS.rpeak;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ============================================================
+    //   PLOTS
+    // ============================================================
+    function drawTriboPlot(xMin, xMax) {
+      const { ctx, w, h } = setupCanvas(els.triboCanvas);
+      const win = filterWindow(state.t_x, state.t_y, xMin);
+      const feet = { t: [], v: [] };
+      for (let i = 0; i < state.feetT.length; i++) {
+        if (state.feetT[i] >= xMin && state.feetT[i] <= xMax) {
+          feet.t.push(state.feetT[i]); feet.v.push(state.feetV[i]);
+        }
+      }
+      const [yMin, yMax] = getRange(win.v, -1, 1, 0.2, 0.005);
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'V');
+      drawLineSeries(ctx, win.t, win.v, map, COLORS.tribo, 1.2);
+      const ftColors = feet.t.map(() => COLORS.foot);
+      drawColoredMarkers(ctx, feet.t, feet.v, ftColors, map, 3);
+    }
+
+    function drawEcgPlot(xMin, xMax) {
+      const { ctx, w, h } = setupCanvas(els.ecgCanvas);
+      const win = filterWindow(state.e_x, state.e_y, xMin);
+      // Beats in window (use beat record times, classify colors)
+      const peaksT = []; const peaksV = []; const peakColors = [];
+      for (const b of state.beats) {
+        if (b.t >= xMin && b.t <= xMax) {
+          // Find R-peak amplitude (search rPeaksV for matching time)
+          const idx = findClosestIndex(state.rPeaksT, b.t);
+          if (idx >= 0 && Math.abs(state.rPeaksT[idx] - b.t) < 0.05) {
+            peaksT.push(b.t);
+            peaksV.push(state.rPeaksV[idx]);
+            peakColors.push(CLASS_COLOR[b.cls] || COLORS.rpeak);
+          }
+        }
+      }
+      // Also include any unprocessed peaks (in case beat hasn't been built yet)
+      for (let i = 0; i < state.rPeaksT.length; i++) {
+        const t = state.rPeaksT[i];
+        if (t < xMin || t > xMax) continue;
+        if (!peaksT.includes(t)) {
+          peaksT.push(t); peaksV.push(state.rPeaksV[i]); peakColors.push(COLORS.unknown);
+        }
+      }
+      const [yMin, yMax] = getRange(win.v, -200, 200, 0.15, 10);
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'ADC');
+      drawLineSeries(ctx, win.t, win.v, map, COLORS.ecg, 1.4);
+      drawColoredMarkers(ctx, peaksT, peaksV, peakColors, map, 4);
+    }
+
+    function drawTemplatePlot() {
+      const { ctx, w, h } = setupCanvas(els.templateCanvas);
+      const xMin = -BEAT_BEFORE_MS;
+      const xMax = BEAT_AFTER_MS;
+      // Y range: from template + recent beats
+      const buf = [];
+      if (state.template) buf.push(...state.template);
+      const recentBeats = state.beats.slice(-25);
+      for (const b of recentBeats) buf.push(...b.v);
+      let [yMin, yMax] = getRange(buf, -1.5, 1.5, 0.1, 0.1);
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'norm');
+      // Vertical "R" line at 0 ms
+      ctx.strokeStyle = '#3a4d76'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+      ctx.beginPath();
+      const rx = map.xMap(0);
+      ctx.moveTo(rx, map.top); ctx.lineTo(rx, map.top + map.ph);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const xs = [];
+      for (let i = 0; i < BEAT_LEN; i++) xs.push((i - BEAT_BEFORE_S) * 1000 / ECG_FS);
+
+      // Draw last ~20 beats faintly
+      for (let i = 0; i < recentBeats.length - 1; i++) {
+        const b = recentBeats[i];
+        drawLineSeries(ctx, xs, b.v, map, COLORS.ecg, 1, 0.18);
+      }
+      // Most recent beat highlighted
+      if (recentBeats.length > 0) {
+        const last = recentBeats[recentBeats.length - 1];
+        drawLineSeries(ctx, xs, last.v, map, '#fde68a', 1.4, 0.85);
+      }
+      // Template (bold)
+      if (state.template) {
+        drawLineSeries(ctx, xs, state.template, map, COLORS.twin, 2.2, 1);
+      } else {
+        ctx.fillStyle = COLORS.axis;
+        ctx.font = '12px system-ui';
+        ctx.fillText('No template yet — calibrate to build your reference beat', 60, h / 2);
+      }
+    }
+
+    function drawRRTachogram(xMin, xMax) {
+      const { ctx, w, h } = setupCanvas(els.rrCanvas);
+      // Build RR series in window
+      const ts = []; const rrs = []; const cls = [];
+      for (let i = 0; i < state.beats.length; i++) {
+        const b = state.beats[i];
+        if (b.t < xMin || b.t > xMax) continue;
+        if (b.rr == null) continue;
+        ts.push(b.t); rrs.push(b.rr); cls.push(b.cls);
+      }
+      const [yMin, yMax] = rrs.length
+        ? [Math.max(300, Math.min(...rrs) - 100), Math.max(...rrs) + 100]
+        : [400, 1200];
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'ms');
+      // Reference: baseline RR if known
+      if (state.baseline && state.baseline.hr) {
+        const refRR = 60000 / state.baseline.hr;
+        ctx.strokeStyle = COLORS.twin; ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+        ctx.beginPath();
+        const y = map.yMap(refRR);
+        ctx.moveTo(map.left, y); ctx.lineTo(map.left + map.pw, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // Draw line between dots (gray)
+      drawLineSeries(ctx, ts, rrs, map, '#3a4d76', 1.0, 0.7);
+      const colors = cls.map(c => CLASS_COLOR[c] || COLORS.unknown);
+      drawColoredMarkers(ctx, ts, rrs, colors, map, 3.5);
+    }
+
+    function drawTrendChart() {
+      const { ctx, w, h } = setupCanvas(els.trendCanvas);
+      const tHR = state.trendHRtimes; const vHR = state.trendHRvalues;
+      const tRM = state.trendRMSSDtimes; const vRM = state.trendRMSSDvalues;
+      let xMin = 0, xMax = 1;
+      const allT = [...tHR, ...tRM];
+      if (allT.length) {
+        xMin = Math.min(...allT); xMax = Math.max(...allT);
+        if (xMax - xMin < 1) xMax = xMin + 1;
+      }
+      // Combined Y range — but normalize separately for each metric using two axes
+      // Simpler: scale HR to range 40..160, RMSSD to 0..200
+      const yMin = 0, yMax = 200;
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, '');
+      // Draw RMSSD directly (already in ms)
+      drawLineSeries(ctx, tRM, vRM, map, COLORS.twin, 1.6);
+      // Draw HR scaled to fit (HR-40 mapped onto 0..200)
+      const hrScaled = vHR.map(v => clamp((v - 40) * (200 / 120), 0, 200));
+      drawLineSeries(ctx, tHR, hrScaled, map, COLORS.rpeak, 1.6);
+      // Mark baseline ref lines
+      if (state.baseline) {
+        if (state.baseline.rmssd != null) {
+          ctx.strokeStyle = COLORS.twin; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+          ctx.beginPath();
+          const y = map.yMap(state.baseline.rmssd);
+          ctx.moveTo(map.left, y); ctx.lineTo(map.left + map.pw, y);
+          ctx.stroke();
+        }
+        if (state.baseline.hr != null) {
+          ctx.strokeStyle = COLORS.rpeak; ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+          ctx.beginPath();
+          const yScaled = clamp((state.baseline.hr - 40) * (200 / 120), 0, 200);
+          const y = map.yMap(yScaled);
+          ctx.moveTo(map.left, y); ctx.lineTo(map.left + map.pw, y);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+    }
+
+    function drawPatPlot(xMin, xMax) {
+      const { ctx, w, h } = setupCanvas(els.patCanvas);
+      const win = filterWindow(state.patTimes, state.patValues, xMin);
+      const [yMin, yMax] = win.v.length
+        ? [Math.max(0, Math.min(...win.v) - 30), Math.max(...win.v) + 30]
+        : [50, 400];
+      const map = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'ms');
+      drawLineSeries(ctx, win.t, win.v, map, COLORS.pat, 1.8);
+      const colors = win.t.map(() => COLORS.pat);
+      drawColoredMarkers(ctx, win.t, win.v, colors, map, 3);
+    }
+
+    // ============================================================
+    //   UI UPDATES
+    // ============================================================
+    function fmtNum(v, digits = 0, fallback = '—') {
+      if (v == null || !isFinite(v)) return fallback;
+      return Number(v).toFixed(digits);
+    }
+
+    function updateRates() {
+      const now = performance.now();
+      if (now - state.lastRateTs >= 1000) {
+        const tc = state.save_t_x.length; const ec = state.save_e_x.length;
+        const tr = tc - state.tCountLast; const er = ec - state.eCountLast;
+        els.ecgBadge.textContent = `${er} sps`;
+        els.triboBadge.textContent = `${tr} sps`;
+        state.tCountLast = tc; state.eCountLast = ec;
+        state.lastRateTs = now;
+      }
+    }
+
+    function syncParams() {
+      els.rpThreshVal.textContent = Number(els.rpThresh.value).toFixed(2);
+      els.rpRefractVal.textContent = Number(els.rpRefract.value).toFixed(2);
+      els.ftSlopeThreshVal.textContent = Number(els.ftSlopeThresh.value).toFixed(2);
+      els.ftPeakHiVal.textContent = Number(els.ftPeakHi.value).toFixed(2);
+      els.pttOffsetVal.textContent = String(els.pttOffset.value);
+      els.morphCutoffVal.textContent = Number(els.morphCutoff.value).toFixed(2);
+      els.prematureCutoffVal.textContent = Number(els.prematureCutoff.value).toFixed(2);
+      rpeak.thresholdFactor = Number(els.rpThresh.value);
+      rpeak.refractoryS = Number(els.rpRefract.value);
+      foot.slopeThresh = Number(els.ftSlopeThresh.value);
+      foot.peakHiS = Number(els.ftPeakHi.value);
+      ptt.minPttMs = Number(els.pttMin.value);
+      ptt.maxPttMs = Number(els.pttMax.value);
+      ptt.offsetMs = Number(els.pttOffset.value);
+    }
+
+    function setDelta(el, value, unit, base, isLowerBetter = false) {
+      if (value == null || base == null) {
+        el.textContent = 'vs baseline: —';
+        el.className = 'delta flat';
+        return;
+      }
+      const d = value - base;
+      const pct = (d / base) * 100;
+      const arrow = d > 0 ? '↑' : d < 0 ? '↓' : '·';
+      el.textContent = `${arrow} ${Math.abs(pct).toFixed(0)}% vs base`;
+      // Color: green if "good", red if "bad"
+      const isElevated = d > 0;
+      const isBad = isLowerBetter ? isElevated : !isElevated;
+      if (Math.abs(pct) < 5) el.className = 'delta flat';
+      else el.className = 'delta ' + (isBad ? 'up' : 'dn');
+    }
+
+    function renderMetrics() {
+      const h = state.hrv;
+      const b = state.baseline;
+      els.hrValue.innerHTML = `${fmtNum(h.hr, 0)} <span class="u">bpm</span>`;
+      els.sdnnValue.innerHTML = `${fmtNum(h.sdnn, 0)} <span class="u">ms</span>`;
+      els.rmssdValue.innerHTML = `${fmtNum(h.rmssd, 0)} <span class="u">ms</span>`;
+      els.pnn50Value.innerHTML = `${fmtNum(h.pnn50, 1)} <span class="u">%</span>`;
+      els.lfhfValue.textContent = fmtNum(h.lfHf, 2);
+
+      setDelta(els.hrDelta, h.hr, 'bpm', b ? b.hr : null, false);
+      setDelta(els.sdnnDelta, h.sdnn, 'ms', b ? b.sdnn : null, true);
+      setDelta(els.rmssdDelta, h.rmssd, 'ms', b ? b.rmssd : null, true);
+      setDelta(els.pnn50Delta, h.pnn50, '%', b ? b.pnn50 : null, true);
+
+      if (h.lfHf != null) {
+        els.lfhfDelta.textContent = h.lfHf > 2.5 ? 'sympathetic-dominant'
+                                  : h.lfHf < 0.8 ? 'parasympathetic-dominant'
+                                  : 'balanced';
+        els.lfhfDelta.className = 'delta flat';
+      }
+
+      // Beats counter
+      const cc = state.classCounts;
+      const total = cc.normal + cc.pvc + cc.pac + cc.abnormal + cc.unknown;
+      const ect = cc.pvc + cc.pac + cc.abnormal;
+      els.beatsValue.textContent = total;
+      els.beatsDelta.textContent = `${cc.normal} normal · ${ect} ectopic`;
+
+      // Twin divergence
+      if (state.twinDivergence != null) {
+        els.divergenceValue.innerHTML = `${state.twinDivergence} <span class="u">%</span>`;
+        const lvl = state.twinDivergence < 25 ? 'low'
+                  : state.twinDivergence < 55 ? 'mid' : 'high';
+        els.divergenceDelta.textContent = `${lvl} divergence`;
+      }
+
+      // PAT badge
+      if (state.patValues.length) {
+        const lastPat = state.patValues[state.patValues.length - 1];
+        const lastN = state.patValues.slice(-10);
+        const avg = lastN.reduce((a, b) => a + b, 0) / lastN.length;
+        els.patValue.innerHTML = `${lastPat.toFixed(0)} <span class="u">ms</span>`;
+        els.patDelta.textContent = `avg: ${avg.toFixed(0)} ms`;
+        els.patBadge.textContent = `${avg.toFixed(0)} ms avg`;
+      }
+
+      els.templateBadge.textContent = `${state.templateCount} beats`;
+      const winRR = state.beats.filter(b => b.rr != null).length;
+      els.rrBadge.textContent = `${winRR} RR`;
+    }
+
+    function renderTwinHero() {
+      if (!state.isConnected && !state.beats.length) {
+        els.twinOrb.className = 'twin-orb idle';
+        els.twinState.textContent = 'Awaiting signal';
+        els.twinDivergence.textContent = 'Connect device and run a 60-second baseline to seed your twin.';
+        return;
+      }
+      if (state.baselineMode) {
+        els.twinOrb.className = 'twin-orb';
+        const dur = Number(els.baselineDur.value) || 60;
+        const elapsed = (state.e_x[state.e_x.length - 1] || 0) - state.baselineStart;
+        const remain = Math.max(0, dur - elapsed);
+        els.twinState.textContent = 'Calibrating baseline';
+        els.twinDivergence.innerHTML = `<b>${remain.toFixed(0)}s</b> remaining · ${state.templateCount} beats captured`;
+        if (remain <= 0) finalizeCalibration();
+        return;
+      }
+      if (!state.baseline) {
+        els.twinOrb.className = 'twin-orb idle';
+        els.twinState.textContent = 'No baseline yet';
+        els.twinDivergence.textContent = 'Tap "Calibrate baseline" while at rest to seed your twin.';
+        return;
+      }
+      const s = state.twinState;
+      els.twinOrb.className = `twin-orb ${orbClass(s)}`;
+      els.twinState.textContent = stateLabel(s);
+      const div = state.twinDivergence;
+      const hr = state.hrv.hr;
+      const rmssd = state.hrv.rmssd;
+      els.twinDivergence.innerHTML = `Divergence <b>${div != null ? div + '%' : '—'}</b> · HR <b>${fmtNum(hr, 0)}</b> bpm · RMSSD <b>${fmtNum(rmssd, 0)}</b> ms`;
+    }
+
+    function renderBeatStrip() {
+      const last = state.beats.slice(-80);
+      const html = last.map(b => `<div class="beat-pip ${b.cls}" title="${b.cls}${b.rr ? ' · RR ' + b.rr.toFixed(0) + 'ms' : ''}${b.sim != null ? ' · sim ' + b.sim.toFixed(2) : ''}"></div>`).join('');
+      els.beatStrip.innerHTML = html || '<span style="color:var(--muted);font-size:0.85rem">No beats yet</span>';
+    }
+
+    function renderInsights() {
+      const items = [];
+      const h = state.hrv;
+      const b = state.baseline;
+
+      if (!state.baseline) {
+        items.push({ kind: '', text: 'No baseline twin established yet — calibrate to enable comparison.' });
+      } else {
+        // HR range
+        if (h.hr != null && b.hr != null) {
+          const dr = relDiff(h.hr, b.hr) * 100;
+          if (dr > 20) items.push({ kind: 'warn', text: `HR is <b>${dr.toFixed(0)}%</b> above your baseline.` });
+          else if (dr < -15) items.push({ kind: '', text: `HR is <b>${(-dr).toFixed(0)}%</b> below baseline (deeply rested).` });
+          else items.push({ kind: 'good', text: `HR <b>${h.hr.toFixed(0)} bpm</b> — within your normal range.` });
+        }
+        // RMSSD direction
+        if (h.rmssd != null && b.rmssd != null) {
+          const dr = relDiff(h.rmssd, b.rmssd) * 100;
+          if (dr < -30) items.push({ kind: 'warn', text: `RMSSD <b>${dr.toFixed(0)}%</b> vs baseline — vagal tone reduced (often stress / illness / sleep deficit).` });
+          else if (dr > 25) items.push({ kind: 'good', text: `RMSSD <b>+${dr.toFixed(0)}%</b> vs baseline — strong parasympathetic activity.` });
+        }
+        // LF/HF
+        if (h.lfHf != null) {
+          if (h.lfHf > 3) items.push({ kind: 'warn', text: `LF/HF <b>${h.lfHf.toFixed(2)}</b> — sympathetic dominance.` });
+          else if (h.lfHf < 0.7) items.push({ kind: '', text: `LF/HF <b>${h.lfHf.toFixed(2)}</b> — parasympathetic dominance.` });
+        }
+        // Ectopic burden
+        const last = state.beats.slice(-60);
+        if (last.length >= 30) {
+          const pvc = last.filter(b => b.cls === 'pvc').length;
+          const pac = last.filter(b => b.cls === 'pac').length;
+          if (pvc > 0) items.push({ kind: pvc >= 3 ? 'alert' : 'warn', text: `<b>${pvc}</b> wide-complex premature beat${pvc > 1 ? 's' : ''} in last ${last.length} (suggestive of PVC).` });
+          if (pac > 0) items.push({ kind: pac >= 4 ? 'warn' : '', text: `<b>${pac}</b> narrow premature beat${pac > 1 ? 's' : ''} in last ${last.length} (suggestive of PAC).` });
+        }
+        // Morphology drift
+        const sims = state.beats.slice(-30).map(x => x.sim).filter(x => x != null);
+        if (sims.length >= 10) {
+          const meanSim = sims.reduce((a, b) => a + b, 0) / sims.length;
+          if (meanSim < 0.85) items.push({ kind: 'warn', text: `Beat morphology drifting from your template (avg similarity <b>${meanSim.toFixed(2)}</b>).` });
+          else if (meanSim > 0.95) items.push({ kind: 'good', text: `Beat shape highly consistent with template (sim <b>${meanSim.toFixed(2)}</b>).` });
+        }
+      }
+      if (!items.length) items.push({ kind: '', text: 'Collecting more data...' });
+      els.insights.innerHTML = items.map(i => `<li class="${i.kind}">${i.text}</li>`).join('');
+    }
+
+    // ============================================================
+    //   ANIMATION LOOP
+    // ============================================================
+    function animate() {
+      syncParams();
+      updateRates();
+
+      // 1. R-peak detection on rolling window
+      if (state.e_x.length > 50) rpeak.detect(state.e_x, state.e_y);
+      // 2. Pulse foot + PAT
+      if (state.t_x.length > 50 && state.rPeaksT.length) foot.detect(state.t_x, state.t_y, state.rPeaksT);
+      if (state.rPeaksT.length && state.feetT.length) ptt.compute(state.rPeaksT, state.feetT);
+
+      // 3. Process new beats (extract, classify)
+      processNewBeats();
+
+      // 4. HRV (every ~1.5 s)
+      const now = performance.now();
+      if (now - state.lastHRVCalc > 1500) {
+        const rrAll = [];
+        const recentR = state.rPeaksT.slice(-120);  // ~2 min worth at 60bpm
+        for (let i = 1; i < recentR.length; i++) {
+          const rr = (recentR[i] - recentR[i - 1]) * 1000;
+          if (rr > 300 && rr < 2000) rrAll.push(rr);
+        }
+        const hrv = computeHRVTime(rrAll);
+        if (hrv) {
+          state.hrv.hr = hrv.hr;
+          state.hrv.sdnn = hrv.sdnn;
+          state.hrv.rmssd = hrv.rmssd;
+          state.hrv.pnn50 = hrv.pnn50;
+          // Trend
+          const tNow = state.e_x.length ? state.e_x[state.e_x.length - 1] : 0;
+          state.trendHRtimes.push(tNow); state.trendHRvalues.push(hrv.hr);
+          state.trendRMSSDtimes.push(tNow); state.trendRMSSDvalues.push(hrv.rmssd);
+          // Cap trend at last 600 seconds
+          while (state.trendHRtimes.length && state.trendHRtimes[0] < tNow - 600) {
+            state.trendHRtimes.shift(); state.trendHRvalues.shift();
+          }
+          while (state.trendRMSSDtimes.length && state.trendRMSSDtimes[0] < tNow - 600) {
+            state.trendRMSSDtimes.shift(); state.trendRMSSDvalues.shift();
+          }
+        }
+        state.lastHRVCalc = now;
+      }
+
+      // 5. Frequency-domain HRV (every ~6 s)
+      if (now - state.lastFreqHRVCalc > 6000) {
+        const fr = computeHRVFreq(state.rPeaksT);
+        if (fr) {
+          state.hrv.lf = fr.lf;
+          state.hrv.hf = fr.hf;
+          state.hrv.lfHf = fr.lfHf;
+        }
+        state.lastFreqHRVCalc = now;
+      }
+
+      // 6. Twin divergence + state
+      state.twinDivergence = computeDivergence();
+      state.twinState = inferState();
+
+      // 7. Render UI (throttled-ish)
+      renderMetrics();
+      renderTwinHero();
+      if (now - state.lastInsightsRefresh > 2000) {
+        renderBeatStrip();
+        renderInsights();
+        state.lastInsightsRefresh = now;
+      }
+
+      // 8. Plot windows
+      const lastT = state.e_x.length ? state.e_x[state.e_x.length - 1] : 0;
+      const xMax = Math.max(lastT, 1);
+      const windowSec = clamp(Number(els.windowSec.value) || 6, 1, 60);
+      const xMin = Math.max(0, xMax - windowSec);
+
+      drawEcgPlot(xMin, xMax + 0.3);
+      drawTemplatePlot();
+      drawRRTachogram(Math.max(0, xMax - Math.max(30, windowSec * 4)), xMax + 0.3);
+      drawTrendChart();
+      drawPatPlot(xMin, xMax + 0.3);
+      drawTriboPlot(xMin, xMax + 0.3);
+
+      state.animationHandle = requestAnimationFrame(animate);
+    }
+
+    // ============================================================
+    //   INIT
+    // ============================================================
+    function init() {
+      ['rpThresh','rpRefract','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => {
+        document.getElementById(id).addEventListener('input', syncParams);
+      });
+      els.connectBtn.addEventListener('click', connectBle);
+      els.reconnectBtn.addEventListener('click', reconnectLastDevice);
+      els.disconnectBtn.addEventListener('click', disconnectBle);
+      els.clearBtn.addEventListener('click', clearData);
+      els.exportBtn.addEventListener('click', exportCsv);
+      els.calibrateBtn.addEventListener('click', startCalibration);
+      els.resetTwinBtn.addEventListener('click', resetTwin);
+
+      window.addEventListener('resize', () => {
+        // Force redraw on next frame
+      });
+
+      syncParams();
+      setConnectedUI(false);
+      refreshReconnectButton();
+      animate();
+    }
+
+    init();
+  </script>
+</body>
+</html>
