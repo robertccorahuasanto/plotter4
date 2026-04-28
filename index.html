@@ -26,6 +26,11 @@ body.collapsed .grid > div:nth-child(2){display:none}
 .topbar-metrics .md.up{color:#fca5a5}.topbar-metrics .md.dn{color:#86efac}
 .topbar-actions{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;max-width:340px}
 .topbar-actions .tb-btn{min-height:26px;padding:3px 8px;font-size:.74rem;font-weight:600;min-width:0;border-radius:6px}
+.lead-toggle{display:inline-flex;background:#0f1a30;border:1px solid #2c426c;border-radius:6px;overflow:hidden;margin-right:4px}
+.lead-toggle .lead-btn{background:transparent;border:none;color:var(--muted);padding:3px 9px;font-size:.72rem;font-weight:600;cursor:pointer;min-height:26px;border-radius:0;border-right:1px solid #2c426c}
+.lead-toggle .lead-btn:last-child{border-right:none}
+.lead-toggle .lead-btn:hover{background:rgba(124,58,237,.15);color:var(--text)}
+.lead-toggle .lead-btn.active{background:#6d28d9;color:#fff}
 @media(max-width:1380px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto}.topbar-actions{grid-column:1/-1;max-width:none;justify-content:flex-start}.topbar-metrics{grid-column:1/-1}}
 @media(max-width:1100px){.topbar-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:920px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto auto}.topbar-metrics{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))}.topbar-actions{grid-column:1/-1;justify-content:flex-start}}
@@ -138,6 +143,11 @@ details.collapsible[open]>summary::after{content:' ▴'}
     <div class="m"><div class="mk">PAT</div><div class="mv" id="patValue">—</div><div class="md flat" id="patDelta">—</div></div>
   </div>
   <div class="topbar-actions">
+    <div class="lead-toggle" role="group" aria-label="Lead position">
+      <button id="leadChestBtn" class="lead-btn active" data-mode="chest" title="Chest lead preset (large amplitude, stable baseline)">Chest</button>
+      <button id="leadFingersBtn" class="lead-btn" data-mode="fingers" title="Fingers preset (small amplitude, prone to drift)">Fingers</button>
+      <button id="leadCustomBtn" class="lead-btn" data-mode="custom" title="Custom — manual settings">Custom</button>
+    </div>
     <button id="connectBtn" class="primary tb-btn">Connect</button>
     <button id="reconnectBtn" class="secondary tb-btn" disabled>Reconnect</button>
     <button id="disconnectBtn" class="danger tb-btn" disabled>Disconnect</button>
@@ -302,7 +312,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
 'use strict';
 
 const els = {};
-['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','twaveWin','twaveWinVal','twaveRatio','twaveRatioVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
+['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','leadChestBtn','leadFingersBtn','leadCustomBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','twaveWin','twaveWinVal','twaveRatio','twaveRatioVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
 
 const C = {grid:'#1c2a47',gridSoft:'#152339',axis:'#7a8eb3',tribo:'#ff6b6b',ecg:'#5aa7ff',pat:'#37d67a',foot:'#ffd166',rpeak:'#ff4d6d',twin:'#a78bfa',bg:'#091120',normal:'#22c55e',pvc:'#ef4444',pac:'#f59e0b',abnormal:'#f97316',unknown:'#475569'};
 const CLS_COLOR = {normal:C.normal,pvc:C.pvc,pac:C.pac,abnormal:C.abnormal,unknown:C.unknown};
@@ -365,15 +375,16 @@ function filterSample(x){
 
 // ============== SQI ==============
 function classifyQuality(std, drift, ptp, spikeRate, jumpStd){
-  // Quality assessment that works across lead placements (fingers, chest, etc).
-  // For clean ECG, the QRS is very steep so jumpStd/std runs high - we cannot
-  // use that ratio alone to detect noise. Use absolute drift and spike rate
-  // primarily, and only flag jumpStd ratio when clearly pathological.
-  if (ptp < 5) return 'poor';                          // flat / saturated / off
-  if (drift > std * 5) return 'poor';                  // huge baseline shift dominates
-  if (spikeRate > 0.06) return 'poor';                 // >6% of samples are spike-like
-  if (drift > std * 2.5 || spikeRate > 0.025) return 'marginal';
-  if (std < 8) return 'marginal';                      // very low variation - probably no contact
+  // Mode-aware thresholds. Chest signals tolerate larger absolute drift and
+  // jumpStd because R-peaks are big; finger signals need tighter limits.
+  const p = (currentLeadMode === 'fingers') ? LEAD_PRESETS.fingers
+          : (currentLeadMode === 'chest') ? LEAD_PRESETS.chest
+          : LEAD_PRESETS.chest;   // fallback for custom
+  if (ptp < 5) return 'poor';
+  if (drift > std * p.sqiDriftPoor) return 'poor';
+  if (spikeRate > p.sqiSpikeRatePoor) return 'poor';
+  if (drift > std * p.sqiDriftMarginal || spikeRate > p.sqiSpikeRateMarginal) return 'marginal';
+  if (std < 8) return 'marginal';
   return 'good';
 }
 function computeSQI(){
@@ -406,11 +417,10 @@ function computeSQI(){
   const dVar = Math.max(0, dSum2/(n-1) - dMean*dMean);
   const jumpStd = Math.sqrt(dVar);
   let spikes = 0;
-  // Spike threshold scales with signal amplitude: a true motion spike stands
-  // out in the derivative. For tall chest signals jumpStd is naturally large,
-  // so we use 6× the local jumpStd (well above the typical QRS slope) and a
-  // floor proportional to the peak-to-peak amplitude of the window.
-  const spikeThr = Math.max(50, 6*jumpStd, 0.4*ptp);
+  // Spike threshold is mode-aware. Chest tolerates larger absolute jumps
+  // because the QRS itself produces big sample-to-sample steps.
+  const sp = (currentLeadMode === 'fingers') ? LEAD_PRESETS.fingers : LEAD_PRESETS.chest;
+  const spikeThr = Math.max(50, sp.sqiSpikeKMul*jumpStd, sp.sqiSpikePtpFrac*ptp);
   for (let i=1;i<n;i++) if (Math.abs(slice[i]-slice[i-1]) > spikeThr) spikes++;
   const spikeRate = spikes / (n-1);
 
@@ -1920,6 +1930,103 @@ function animate(){
   state.animationHandle = requestAnimationFrame(animate);
 }
 
+// ============== LEAD MODE PRESETS ==============
+// Different lead positions produce different signal characteristics. A single
+// set of parameters cannot serve both well, so we ship two presets plus a
+// freeform Custom mode.
+//
+// CHEST: large QRS amplitude (R typically thousands of ADC), R dominates,
+// baseline is relatively stable, T-waves modest relative to R. Tolerates
+// high signal energy. Allows looser SQI and less aggressive T-wave rejection.
+//
+// FINGERS: small QRS amplitude (R typically tens to hundreds of ADC),
+// constant micro-motion, high relative noise, drift-prone, T-waves
+// frequently comparable to R. Needs stricter SQI and more aggressive T-wave
+// rejection. Lower morphology cutoff because beat-to-beat shape varies more.
+const LEAD_PRESETS = {
+  chest: {
+    rpThresh: 0.45,         // peak threshold - chest QRS towers above baseline
+    rpRefract: 0.36,        // standard refractory
+    twaveWin: 0.40,         // T-wave search window
+    twaveRatio: 0.55,       // chest T-waves are usually <55% of R
+    morphCutoff: 0.85,      // strict morphology - chest signals are clean
+    prematureCutoff: 0.85,
+    hpCut: 0.5,
+    lpCut: 35,
+    sqiSpikeRatePoor: 0.06,
+    sqiSpikeRateMarginal: 0.025,
+    sqiDriftPoor: 5.0,
+    sqiDriftMarginal: 2.5,
+    sqiSpikeKMul: 6,        // multiplier on jumpStd for spike threshold
+    sqiSpikePtpFrac: 0.40,
+  },
+  fingers: {
+    rpThresh: 0.55,         // higher threshold - relatively noisier
+    rpRefract: 0.38,        // slightly longer; fingers have slower-rising T sometimes
+    twaveWin: 0.45,         // longer T-wave search
+    twaveRatio: 0.70,       // finger T-waves can be 70% of R
+    morphCutoff: 0.78,      // looser - more beat-to-beat shape variation
+    prematureCutoff: 0.82,
+    hpCut: 0.7,             // higher HP to remove finger movement drift
+    lpCut: 30,              // lower LP - cuts more high-freq finger noise
+    sqiSpikeRatePoor: 0.04,
+    sqiSpikeRateMarginal: 0.015,
+    sqiDriftPoor: 4.0,
+    sqiDriftMarginal: 2.0,
+    sqiSpikeKMul: 5,
+    sqiSpikePtpFrac: 0.30,
+  },
+};
+
+let currentLeadMode = 'chest';   // active mode; sqi reads its tunables from here
+
+function applyLeadPreset(mode){
+  if (mode === 'custom'){
+    currentLeadMode = 'custom';
+    updateLeadButtons();
+    setStatus('Custom mode · settings unchanged. Edit any control to fine-tune.', 'twin');
+    return;
+  }
+  const p = LEAD_PRESETS[mode];
+  if (!p) return;
+  currentLeadMode = mode;
+  // Push into the UI controls (which feed back through syncParams to the engine)
+  els.rpThresh.value = p.rpThresh;
+  els.rpRefract.value = p.rpRefract;
+  els.twaveWin.value = p.twaveWin;
+  els.twaveRatio.value = p.twaveRatio;
+  els.morphCutoff.value = p.morphCutoff;
+  els.prematureCutoff.value = p.prematureCutoff;
+  els.hpCut.value = p.hpCut;
+  els.lpCut.value = p.lpCut;
+  // Reconfigure biquads with new cutoffs
+  configFilters();
+  // Sync display values + push into detector classes
+  syncParams();
+  updateLeadButtons();
+  setStatus(`Lead mode: ${mode === 'chest' ? 'Chest' : 'Fingers'} · presets applied.`, 'ok');
+}
+
+function updateLeadButtons(){
+  els.leadChestBtn.classList.toggle('active', currentLeadMode === 'chest');
+  els.leadFingersBtn.classList.toggle('active', currentLeadMode === 'fingers');
+  els.leadCustomBtn.classList.toggle('active', currentLeadMode === 'custom');
+}
+
+// Switch to Custom mode whenever the user manually edits a preset-controlled knob
+function watchManualOverrides(){
+  const presetIds = ['rpThresh','rpRefract','twaveWin','twaveRatio','morphCutoff','prematureCutoff','hpCut','lpCut'];
+  for (const id of presetIds){
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      if (currentLeadMode !== 'custom'){
+        currentLeadMode = 'custom';
+        updateLeadButtons();
+      }
+    });
+  }
+}
+
 // ============== INIT ==============
 function init(){
   ['rpThresh','rpRefract','twaveWin','twaveRatio','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => document.getElementById(id).addEventListener('input', syncParams));
@@ -1936,8 +2043,15 @@ function init(){
   els.closeReportBtn.addEventListener('click', () => els.reportCard.style.display = 'none');
   els.calibrateBtn.addEventListener('click', startCalibration);
   els.resetTwinBtn.addEventListener('click', resetTwin);
+  els.leadChestBtn.addEventListener('click', () => applyLeadPreset('chest'));
+  els.leadFingersBtn.addEventListener('click', () => applyLeadPreset('fingers'));
+  els.leadCustomBtn.addEventListener('click', () => applyLeadPreset('custom'));
+  watchManualOverrides();
   const toggleBtn = document.getElementById('toggleSideBtn');
   if (toggleBtn) toggleBtn.addEventListener('click', () => document.body.classList.toggle('collapsed'));
+  // Apply the default lead preset (Chest) so all knobs are set consistently
+  // before syncParams pushes them into the detector classes.
+  applyLeadPreset('chest');
   syncParams();
   setConnUI(false);
   refreshReconnect();
