@@ -457,7 +457,13 @@ class RPeakDetector {
     for (let i=0;i<v.length;i++) dev[i] = Math.abs(v[i] - median);
     dev.sort((a,b)=>a-b);
     const mad = Math.max(1, dev[dev.length>>1]);
-    const robustHigh = median + mad * 6;
+    // Use the 95th percentile of the window as the upper anchor for the
+    // detection threshold. This is robust to baseline noise but also adapts
+    // to whatever amplitude the actual R-peaks live at — unlike a fixed
+    // multiple of MAD, which under-shoots on tall chest signals (where R is
+    // 20–30× MAD above median) and produces no detections at all.
+    const p95Idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+    const robustHigh = sorted[p95Idx];
     if (robustHigh - median < 10) return;
     const thr = median + (robustHigh - median) * this.thresholdFactor;
     const dt = Math.max(1e-6, (t[t.length-1]-t[0])/Math.max(1,t.length-1));
@@ -465,7 +471,12 @@ class RPeakDetector {
     const peaks = [];
     let last = -minD;
     for (let i=1;i<v.length-1;i++){
-      if (v[i] > median + mad * 14) continue;
+      // Real motion-artifact spikes are MUCH bigger than the surrounding
+      // R-peaks. Reject only if the sample exceeds 4× the 95th-percentile
+      // amplitude — this catches spikes without rejecting real R-peaks.
+      // (Previous version compared against baseline MAD, which silently
+      // rejected every real R-peak on tall chest signals.)
+      if (v[i] - median > (robustHigh - median) * 4) continue;
       if (v[i]>thr && v[i]>=v[i-1] && v[i]>v[i+1]){
         if (i - last >= minD){ peaks.push(i); last = i; }
         else if (peaks.length > 0 && v[i] > v[peaks[peaks.length-1]]){ peaks[peaks.length-1] = i; last = i; }
