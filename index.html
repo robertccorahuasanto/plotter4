@@ -9,38 +9,40 @@
 :root{--bg:#0b1220;--panel:#101a2e;--panel-2:#16223c;--text:#e5eefc;--muted:#9fb0cf;--accent:#60a5fa;--accent-2:#22c55e;--danger:#ef4444;--warn:#f59e0b;--line:#223253;--tribo:#ff5c5c;--ecg:#5aa7ff;--pat:#37d67a;--foot:#ffd166;--rpeak:#ff4d6d;--twin:#a78bfa;--normal:#22c55e;--pvc:#ef4444;--pac:#f59e0b;--abnormal:#f97316;--qg:#22c55e;--qm:#f59e0b;--qp:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:linear-gradient(180deg,#07101f 0%,#0b1220 100%);color:var(--text)}
-.wrap{max-width:1280px;margin:0 auto;padding:8px 12px}
-h1{margin:0 0 2px;font-size:1.05rem;font-weight:700}
-.sub{color:var(--muted);font-size:.78rem;margin-bottom:8px}
-.grid{display:grid;grid-template-columns:1.35fr .6fr;gap:10px}
+.wrap{max-width:1280px;margin:0 auto;padding:6px 10px}
+h1{margin:0;font-size:.95rem;font-weight:700}
+.sub{color:var(--muted);font-size:.7rem;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:1.35fr .55fr;gap:8px}
 body.collapsed .grid{grid-template-columns:1fr}
 body.collapsed .grid > div:nth-child(2){display:none}
 
 /* compact unified top bar: orb + state + metrics + actions in one row */
-.topbar{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 10px;margin-bottom:8px;background:linear-gradient(135deg,rgba(91,33,182,.16) 0%,rgba(16,26,46,.94) 60%);border:1px solid #3b2466;border-radius:10px}
-.topbar-metrics{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
-.topbar-metrics .m{background:rgba(22,34,60,.7);border:1px solid #243553;border-radius:6px;padding:3px 6px;min-width:0}
-.topbar-metrics .mk{color:var(--muted);font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;line-height:1}
-.topbar-metrics .mv{font-size:.85rem;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-metrics .md{font-size:.58rem;color:var(--muted);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:5px 8px;margin-bottom:6px;background:linear-gradient(135deg,rgba(91,33,182,.16) 0%,rgba(16,26,46,.94) 60%);border:1px solid #3b2466;border-radius:8px}
+.topbar-metrics{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px}
+.topbar-metrics .m{background:rgba(22,34,60,.7);border:1px solid #243553;border-radius:5px;padding:2px 5px;min-width:0}
+.topbar-metrics .mk{color:var(--muted);font-size:.55rem;text-transform:uppercase;letter-spacing:.04em;line-height:1}
+.topbar-metrics .mv{font-size:.78rem;font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-metrics .md{font-size:.54rem;color:var(--muted);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .topbar-metrics .md.up{color:#fca5a5}.topbar-metrics .md.dn{color:#86efac}
-.topbar-actions{display:flex;gap:4px}
-.topbar-actions .tb-btn{min-height:30px;padding:4px 10px;font-size:.78rem;font-weight:600;min-width:0}
-@media(max-width:1280px){.topbar-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:920px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto auto}.topbar-metrics{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))}.topbar-actions{grid-column:1/-1;justify-content:flex-end}}
+.topbar-actions{display:flex;flex-wrap:wrap;gap:3px;justify-content:flex-end;max-width:340px}
+.topbar-actions .tb-btn{min-height:26px;padding:3px 8px;font-size:.74rem;font-weight:600;min-width:0;border-radius:6px}
+@media(max-width:1380px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto}.topbar-actions{grid-column:1/-1;max-width:none;justify-content:flex-start}.topbar-metrics{grid-column:1/-1}}
+@media(max-width:1100px){.topbar-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:920px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto auto}.topbar-metrics{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))}.topbar-actions{grid-column:1/-1;justify-content:flex-start}}
 @media(max-width:520px){.topbar-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-.card{background:rgba(16,26,46,.94);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+.statusbar{padding:4px 10px;font-size:.78rem;margin-bottom:6px;border-radius:6px}
+.card{background:rgba(16,26,46,.94);border:1px solid var(--line);border-radius:8px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,.22)}
 .twin-hero{background:linear-gradient(135deg,rgba(91,33,182,.18) 0%,rgba(16,26,46,.94) 60%);border:1px solid #3b2466;border-radius:12px;padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
-.twin-orb{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#c4b5fd 0%,#7c3aed 45%,#4c1d95 100%);box-shadow:0 0 22px rgba(139,92,246,.35),inset 0 0 16px rgba(0,0,0,.5);position:relative;flex-shrink:0;transition:.4s ease}
+.twin-orb{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#c4b5fd 0%,#7c3aed 45%,#4c1d95 100%);box-shadow:0 0 16px rgba(139,92,246,.3),inset 0 0 12px rgba(0,0,0,.5);position:relative;flex-shrink:0;transition:.4s ease}
 .twin-orb.warn{background:radial-gradient(circle at 30% 30%,#fde68a 0%,#f59e0b 45%,#78350f 100%);box-shadow:0 0 22px rgba(245,158,11,.45),inset 0 0 16px rgba(0,0,0,.5)}
 .twin-orb.alert{background:radial-gradient(circle at 30% 30%,#fecaca 0%,#ef4444 45%,#7f1d1d 100%);box-shadow:0 0 26px rgba(239,68,68,.5),inset 0 0 16px rgba(0,0,0,.5)}
 .twin-orb.idle{background:radial-gradient(circle at 30% 30%,#94a3b8 0%,#475569 45%,#1e293b 100%);box-shadow:0 0 10px rgba(100,116,139,.18),inset 0 0 16px rgba(0,0,0,.5)}
 .twin-orb::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px dashed rgba(167,139,250,.28);animation:spin 16s linear infinite}
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 .twin-info{min-width:0}
-.twin-state-label{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1px}
-.twin-state{font-size:1.05rem;font-weight:700;letter-spacing:-.01em;margin-bottom:2px}
-.twin-divergence{color:var(--muted);font-size:.82rem}
+.twin-state-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:1px}
+.twin-state{font-size:.92rem;font-weight:700;letter-spacing:-.01em;margin-bottom:1px;line-height:1.1}
+.twin-divergence{color:var(--muted);font-size:.72rem;line-height:1.1}
 .twin-divergence b{color:var(--text)}
 .twin-actions{display:flex;flex-direction:column;gap:5px}
 .twin-actions button{min-width:130px;min-height:32px;padding:6px 10px;font-size:.82rem}
@@ -65,13 +67,13 @@ input[type=checkbox]{transform:scale(1.2)}
 .metric .u{font-size:.65rem;color:var(--muted);font-weight:400;margin-left:2px}
 .metric .delta{font-size:.62rem;color:var(--muted);margin-top:1px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .metric .delta.up{color:#fca5a5}.metric .delta.dn{color:#86efac}.metric .delta.flat{color:var(--muted)}
-.status{padding:9px 12px;border-radius:10px;background:#10213e;border:1px solid #23406a;color:var(--muted);margin-bottom:10px;word-break:break-word;font-size:.9rem}
+.status{padding:6px 10px;border-radius:8px;background:#10213e;border:1px solid #23406a;color:var(--muted);margin-bottom:6px;word-break:break-word;font-size:.82rem}
 .status.ok{color:#9ae6b4;border-color:#22543d;background:#0d2518}
 .status.warn{color:#fde68a;border-color:#854d0e;background:#2a1b05}
 .status.err{color:#fecaca;border-color:#7f1d1d;background:#2a0d10}
 .status.twin{color:#ddd6fe;border-color:#5b21b6;background:#1e1438}
-.plot-card{padding:6px 8px 8px}
-.plot-title{font-size:.85rem;font-weight:700;margin:2px 4px 6px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.plot-card{padding:5px 6px 6px}
+.plot-title{font-size:.78rem;font-weight:700;margin:1px 4px 4px;display:flex;justify-content:space-between;align-items:center;gap:6px}
 .plot-title .badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .plot-title .badge{font-size:.72rem;color:var(--muted);font-weight:500;background:#1a2540;border:1px solid #2c426c;padding:2px 8px;border-radius:999px}
 .plot-title .badge.q{display:inline-flex;align-items:center;gap:5px}
@@ -79,11 +81,11 @@ input[type=checkbox]{transform:scale(1.2)}
 .plot-title .badge.q.marginal::before{background:var(--qm)}
 .plot-title .badge.q.poor::before{background:var(--qp)}
 .plot-title .badge.q.idle::before{background:#475569}
-canvas.plot{width:100%;height:160px;display:block;background:#091120;border:1px solid #223253;border-radius:12px;touch-action:manipulation}
-canvas.plot.tall{height:240px}
-canvas.plot.short{height:110px}
+canvas.plot{width:100%;height:140px;display:block;background:#091120;border:1px solid #223253;border-radius:8px;touch-action:manipulation}
+canvas.plot.tall{height:200px}
+canvas.plot.short{height:90px}
 canvas.plot.square{aspect-ratio:1;height:auto}
-.dual-plot{display:grid;grid-template-columns:280px 1fr;gap:12px}
+.dual-plot{display:grid;grid-template-columns:240px 1fr;gap:8px}
 @media(max-width:920px){.dual-plot{grid-template-columns:1fr}}
 .beat-strip{display:flex;gap:3px;padding:6px 4px;flex-wrap:wrap}
 .beat-pip{width:12px;height:18px;border-radius:3px;background:var(--normal);flex-shrink:0}
@@ -103,12 +105,12 @@ details.collapsible>summary{cursor:pointer;color:var(--muted);font-size:.85rem;t
 details.collapsible>summary::-webkit-details-marker{display:none}
 details.collapsible>summary::after{content:' ▾';color:var(--muted)}
 details.collapsible[open]>summary::after{content:' ▴'}
-.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.7rem;color:var(--muted);padding:3px 4px 4px}
-.legend span{display:inline-flex;align-items:center;gap:4px}
-.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.legend{display:flex;gap:8px;flex-wrap:wrap;font-size:.65rem;color:var(--muted);padding:2px 4px 2px}
+.legend span{display:inline-flex;align-items:center;gap:3px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
 .report-pre{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.83rem;line-height:1.55;color:var(--text);background:#050b18;border:1px solid #1a2540;border-radius:10px;padding:14px;margin:0;max-height:480px;overflow-y:auto;white-space:pre-wrap}
 @media(max-width:1100px){.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:920px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}canvas.plot{height:180px}canvas.plot.tall{height:200px}canvas.plot.short{height:130px}.twin-hero{grid-template-columns:auto 1fr}.twin-actions{grid-column:1/-1;flex-direction:row}.twin-actions button{flex:1;min-width:0}.twin-orb{width:48px;height:48px}.twin-state{font-size:1rem}}
+@media(max-width:920px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}canvas.plot{height:130px}canvas.plot.tall{height:170px}canvas.plot.short{height:80px}.twin-hero{grid-template-columns:auto 1fr}.twin-actions{grid-column:1/-1;flex-direction:row}.twin-actions button{flex:1;min-width:0}.twin-orb{width:40px;height:40px}.twin-state{font-size:.85rem}}
 @media(max-width:520px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:921px){.grid > div:nth-child(2){position:sticky;top:8px;align-self:start;max-height:calc(100vh - 16px);overflow-y:auto}}
 </style>
@@ -131,16 +133,25 @@ details.collapsible[open]>summary::after{content:' ▴'}
     <div class="m"><div class="mk">RMSSD</div><div class="mv" id="rmssdValue">—</div><div class="md flat" id="rmssdDelta">—</div></div>
     <div class="m"><div class="mk">pNN50</div><div class="mv" id="pnn50Value">—</div><div class="md flat" id="pnn50Delta">—</div></div>
     <div class="m"><div class="mk">LF/HF</div><div class="mv" id="lfhfValue">—</div><div class="md flat" id="lfhfDelta">—</div></div>
-    <div class="m"><div class="mk">SD1·2</div><div class="mv" id="sdvalues">— · —</div><div class="md flat">Poincaré</div></div>
+    <div class="m"><div class="mk">SD1·2</div><div class="mv" id="sdvalues">—·—</div><div class="md flat">Poincaré</div></div>
     <div class="m"><div class="mk">DIV</div><div class="mv" id="divergenceValue">—</div><div class="md flat" id="divergenceDelta">—</div></div>
     <div class="m"><div class="mk">PAT</div><div class="mv" id="patValue">—</div><div class="md flat" id="patDelta">—</div></div>
   </div>
   <div class="topbar-actions">
+    <button id="connectBtn" class="primary tb-btn">Connect</button>
+    <button id="reconnectBtn" class="secondary tb-btn" disabled>Reconnect</button>
+    <button id="disconnectBtn" class="danger tb-btn" disabled>Disconnect</button>
     <button id="calibrateBtn" class="twin tb-btn">Calibrate</button>
     <button id="resetTwinBtn" class="secondary tb-btn">Reset</button>
+    <button id="clearBtn" class="secondary tb-btn">Clear</button>
+    <button id="exportBtn" class="secondary tb-btn">Export</button>
+    <button id="reportBtn" class="secondary tb-btn">Report</button>
     <button id="toggleSideBtn" class="secondary tb-btn" title="Toggle controls panel">☰</button>
   </div>
 </div>
+
+<!-- thin status strip -->
+<div id="status" class="status warn statusbar">Ready. Open in Chrome/Edge on a supported device, then tap Connect.</div>
 
 <div class="grid">
   <div>
@@ -163,7 +174,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
       </div>
     </div>
 
-    <div class="card plot-card" style="margin-top:12px">
+    <div class="card plot-card" style="margin-top:6px">
       <div class="plot-title"><span>Beat template — your twin's reference beat</span><span class="badge" id="templateBadge">0 beats</span></div>
       <canvas id="templateCanvas" class="plot"></canvas>
       <div class="legend">
@@ -173,12 +184,12 @@ details.collapsible[open]>summary::after{content:' ▴'}
       </div>
     </div>
 
-    <div class="card plot-card" style="margin-top:12px">
+    <div class="card plot-card" style="margin-top:6px">
       <div class="plot-title"><span>RR tachogram</span><span class="badge" id="rrBadge">0 RR</span></div>
       <canvas id="rrCanvas" class="plot"></canvas>
     </div>
 
-    <div class="dual-plot" style="margin-top:12px">
+    <div class="dual-plot" style="margin-top:6px">
       <div class="card plot-card">
         <div class="plot-title"><span>Poincaré</span><span class="badge" id="poincareBadge">— pts</span></div>
         <canvas id="poincareCanvas" class="plot square"></canvas>
@@ -191,7 +202,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
       </div>
     </div>
 
-    <div class="card plot-card" style="margin-top:12px">
+    <div class="card plot-card" style="margin-top:6px">
       <div class="plot-title"><span>HR &amp; HRV trend</span></div>
       <canvas id="trendCanvas" class="plot short"></canvas>
       <div class="legend">
@@ -200,12 +211,12 @@ details.collapsible[open]>summary::after{content:' ▴'}
       </div>
     </div>
 
-    <div class="card plot-card" style="margin-top:12px">
+    <div class="card plot-card" style="margin-top:6px">
       <div class="plot-title"><span>PAT</span><span class="badge" id="patBadge">— ms</span></div>
       <canvas id="patCanvas" class="plot short"></canvas>
     </div>
 
-    <div class="card plot-card" style="margin-top:12px">
+    <div class="card plot-card" style="margin-top:6px">
       <div class="plot-title"><span>Triboelectric pulse · verification only</span><span class="badge" id="triboBadge">— sps</span></div>
       <canvas id="triboCanvas" class="plot short"></canvas>
     </div>
@@ -224,35 +235,24 @@ details.collapsible[open]>summary::after{content:' ▴'}
 
   <div>
     <div class="card">
-      <div id="status" class="status warn">Ready. Open in Chrome/Edge on a supported device, then tap Connect.</div>
-      <div class="row">
-        <button id="connectBtn" class="primary">Connect BLE</button>
-        <button id="reconnectBtn" class="secondary" disabled>Reconnect Last</button>
-        <button id="disconnectBtn" class="danger" disabled>Disconnect</button>
-      </div>
-      <div class="row">
-        <button id="clearBtn" class="secondary">Clear</button>
-        <button id="exportBtn" class="secondary">Export all data</button>
-        <button id="reportBtn" class="secondary">Session report</button>
-      </div>
       <div class="metrics" style="grid-template-columns:1fr 1fr">
         <div class="metric"><div class="k">Connection</div><div class="v" id="connectionValue">Disconnected</div></div>
         <div class="metric"><div class="k">Device</div><div class="v mono" id="deviceValue">—</div></div>
       </div>
     </div>
 
-    <div class="card" style="margin-top:12px">
+    <div class="card" style="margin-top:6px">
       <div class="section-title">Recent beats</div>
       <div class="beat-strip" id="beatStrip"></div>
       <div class="footer-note" style="margin-top:0">Last 80 beats · color = classification</div>
     </div>
 
-    <div class="card" style="margin-top:12px">
+    <div class="card" style="margin-top:6px">
       <div class="section-title">Twin insights</div>
       <ul id="insights" class="insight-list"><li>Awaiting data...</li></ul>
     </div>
 
-    <div class="card" style="margin-top:12px">
+    <div class="card" style="margin-top:6px">
       <details class="collapsible" open>
         <summary>Signal &amp; display</summary>
         <label><span>Bandpass filter</span><input id="filterEnable" type="checkbox" checked /></label>
@@ -334,7 +334,7 @@ const state = {
   classCounts:{normal:0,pvc:0,pac:0,abnormal:0,unknown:0},
   sessionStart:null,
   lastRateTs:performance.now(), tCountLast:0, eCountLast:0,
-  lastHRVCalc:0, lastFreqHRVCalc:0, lastInsightsRefresh:0,
+  lastHRVCalc:0, lastFreqHRVCalc:0, lastInsightsRefresh:0, lastDetectCalc:0, lastPlotDraw:0,
   animationHandle:null,
 };
 
@@ -882,18 +882,37 @@ function relDiff(now, base){ if (base==null||base===0||now==null) return 0; retu
 function computeDivergence(){
   if (!state.baseline) return null;
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
-  if (tNow - state.baseline.lockedAt < 6) return 0;   // warmup
+  // Longer warmup so the rolling HRV window settles on post-baseline beats
+  if (tNow - state.baseline.lockedAt < 15) return 0;
   const b = state.baseline, h = state.hrv;
   const parts = [];
-  if (h.hr != null && b.hr != null) parts.push(Math.min(1, Math.abs(relDiff(h.hr, b.hr))/0.5));
-  if (h.rmssd != null && b.rmssd != null) parts.push(Math.min(1, Math.abs(relDiff(h.rmssd, b.rmssd))/0.6));
-  if (h.sdnn != null && b.sdnn != null) parts.push(Math.min(1, Math.abs(relDiff(h.sdnn, b.sdnn))/0.6));
+  // HR: bidirectional - both up and down are interesting
+  if (h.hr != null && b.hr != null){
+    parts.push(Math.min(1, Math.abs(relDiff(h.hr, b.hr))/0.5));
+  }
+  // RMSSD: ONLY DECREASES count as divergence. Increased RMSSD = more
+  // parasympathetic tone = healthy / relaxed, NOT divergent. The previous
+  // bidirectional formula scored deeper rest as "alert" because RMSSD
+  // naturally rises when you sit still and breathe slowly.
+  if (h.rmssd != null && b.rmssd != null){
+    const d = relDiff(h.rmssd, b.rmssd);
+    if (d < 0) parts.push(Math.min(1, Math.abs(d)/0.6));
+    else parts.push(0);
+  }
+  // SDNN: same — only decrease counts (loss of total variability = stress)
+  if (h.sdnn != null && b.sdnn != null){
+    const d = relDiff(h.sdnn, b.sdnn);
+    if (d < 0) parts.push(Math.min(1, Math.abs(d)/0.6));
+    else parts.push(0);
+  }
+  // Morphology: bidirectional (different shape = potentially abnormal)
   const recent = state.beats.slice(-30);
   const sims = recent.map(x => x.sim).filter(x => x != null);
   if (sims.length >= 5){
     const ms = sims.reduce((a,b)=>a+b,0)/sims.length;
     parts.push(Math.min(1, Math.max(0, (1-ms)*2)));
   }
+  // Ectopic burden
   const last = state.beats.slice(-60);
   if (last.length >= 20){
     const ect = last.filter(b => b.cls === 'pvc' || b.cls === 'pac' || b.cls === 'abnormal').length;
@@ -907,14 +926,14 @@ function inferState(){
   if (!state.baseline || state.hrv.hr == null) return 'idle';
   if (state.signalQuality === 'poor') return 'idle';
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
-  if (tNow - state.baseline.lockedAt < 6) return 'resting';
+  if (tNow - state.baseline.lockedAt < 15) return 'resting';   // warmup matches divergence
   const h = state.hrv, b = state.baseline;
   const hrRel = relDiff(h.hr, b.hr);
   const rmssdRel = h.rmssd != null && b.rmssd ? relDiff(h.rmssd, b.rmssd) : 0;
   const last60 = state.beats.slice(-60);
   const ectRate = last60.length ? last60.filter(b => b.cls !== 'normal' && b.cls !== 'unknown').length/last60.length : 0;
   if (ectRate > 0.15) return 'alert';
-  if (Math.abs(hrRel) > 0.3 || ectRate > 0.05) return 'warn';
+  if (hrRel > 0.3 || ectRate > 0.05) return 'warn';     // only HR INCREASE counts as warn
   if (hrRel > 0.15) return 'active';
   if (rmssdRel < -0.4 && hrRel > 0.05) return 'mild';
   return 'resting';
@@ -989,8 +1008,44 @@ async function connectTo(dev){
   state.device.removeEventListener('gattserverdisconnected', onDisc);
   state.device.addEventListener('gattserverdisconnected', onDisc);
   setStatus(`Connecting to ${dev.name||'BLE device'}...`, 'warn');
-  state.server = await dev.gatt.connect();
-  const s = await state.server.getPrimaryService(svc);
+
+  // Retry the GATT handshake. Web Bluetooth on Chrome can sporadically fail
+  // with "GATT Server is disconnected. Cannot retrieve services" right after
+  // gatt.connect() resolves — typically because the connection drops in the
+  // small gap before the OS finishes service discovery, or because a previous
+  // session left a stale GATT cache. Retries with brief delays clear this.
+  let s = null;
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 4; attempt++){
+    try {
+      // Make sure we're actually connected (no-op if already)
+      if (!dev.gatt.connected){
+        state.server = await dev.gatt.connect();
+      } else {
+        state.server = dev.gatt;
+      }
+      // Brief stabilization pause — gives the OS time to finish service
+      // discovery and prevents the race that triggers the "Cannot retrieve
+      // services" error. 250ms is enough on every device I've tested.
+      await new Promise(r => setTimeout(r, 250));
+      // Verify we're still connected before service discovery
+      if (!dev.gatt.connected) throw new Error('GATT dropped during stabilization');
+      s = await state.server.getPrimaryService(svc);
+      break;
+    } catch (err){
+      lastErr = err;
+      console.warn(`BLE connect attempt ${attempt} failed:`, err.message || err);
+      try { dev.gatt.disconnect(); } catch {}
+      if (attempt < 4){
+        setStatus(`Connect retry ${attempt}/3...`, 'warn');
+        await new Promise(r => setTimeout(r, 500 * attempt));   // exponential-ish backoff
+      }
+    }
+  }
+  if (!s){
+    throw lastErr || new Error('BLE connect failed after retries.');
+  }
+
   state.triboChar = await s.getCharacteristic(tu);
   state.triboChar.removeEventListener('characteristicvaluechanged', onTribo);
   state.triboChar.addEventListener('characteristicvaluechanged', onTribo);
@@ -1058,45 +1113,56 @@ function startCalibration(){
   setStatus(`Calibrating · stay still for ${dur}s`, 'twin');
 }
 function finalizeCalibration(){
-  // Need at least a handful of beats with a current template to finalize.
   if (state.beats.length < 10 || !state.template){
     setStatus('Baseline incomplete · not enough clean beats. Recalibrate.', 'warn');
     state.baselineMode = false;
     return;
   }
-  // ===== Outlier rejection =====
-  // Score every collected baseline beat vs the running template, drop the worst
-  // 15% (lowest similarity), then rebuild the template as the mean of the
-  // surviving high-similarity beats. This removes any artifact that slipped
-  // through SQI gating during calibration.
+  // Outlier rejection: drop the 15% of beats least similar to the running template
   const sims = state.beats.map(b => ({ b, sim: beatSimilarity(b.v) ?? -1 }));
-  sims.sort((a, b) => b.sim - a.sim);                  // highest first
+  sims.sort((a, b) => b.sim - a.sim);
   const keepN = Math.max(8, Math.floor(sims.length * 0.85));
   const kept = sims.slice(0, keepN);
-  // Rebuild template as plain mean of kept beats
   const tpl = new Array(BEAT_LEN).fill(0);
   for (const k of kept) for (let i=0;i<BEAT_LEN;i++) tpl[i] += k.b.v[i];
   for (let i=0;i<BEAT_LEN;i++) tpl[i] /= kept.length;
   state.template = tpl;
   state.templateCount = kept.length;
 
-  // RR series only from kept beats — outliers excluded from baseline HRV too.
+  // RR series from kept beats. Apply EXTRA stringency for baseline RR: only
+  // accept beats whose RR is within ±25 % of the median of nearby kept beats.
+  // This is what catches BLE-drop artifacts (huge ~3 s gaps) that would
+  // otherwise inflate baseline RMSSD/SDNN by 2-3x and then make every later
+  // measurement look "divergent" forever after.
   const keptT = new Set(kept.map(k => k.b.t));
-  const rrAll = [];
+  const rrRaw = [];
   for (const b of state.beats){
     if (!keptT.has(b.t)) continue;
-    if (b.rr != null && b.rr > 300 && b.rr < 2000) rrAll.push(b.rr);
+    if (b.rr != null && b.rr > 300 && b.rr < 2000) rrRaw.push(b.rr);
   }
+  if (rrRaw.length < 8){ setStatus('Baseline incomplete · not enough valid RR. Recalibrate.', 'warn'); state.baselineMode = false; return; }
+  const sortedRR = rrRaw.slice().sort((a,b)=>a-b);
+  const medRR = sortedRR[sortedRR.length>>1];
+  const rrAll = rrRaw.filter(rr => rr > medRR*0.75 && rr < medRR*1.25);
+  const dropped_rr = rrRaw.length - rrAll.length;
+
   const hrv = computeHRVTime(rrAll);
-  if (!hrv){ setStatus('Baseline incomplete · not enough clean beats. Recalibrate.', 'warn'); state.baselineMode = false; return; }
-  // Re-score every stored beat against the now-final template so post-baseline
-  // divergence starts at zero rather than spiking from immature-template scores.
+  if (!hrv){ setStatus('Baseline incomplete · not enough clean RR after gap filtering. Recalibrate.', 'warn'); state.baselineMode = false; return; }
+
+  // Sanity check: a typical resting RMSSD is ~20-60 ms. If we see >100 ms
+  // even after gap filtering, the recording was too noisy for a reliable
+  // baseline. Better to refuse than lock a corrupted reference.
+  if (hrv.rmssd > 120 || hrv.sdnn > 150){
+    setStatus(`Baseline rejected · HRV unrealistic (RMSSD ${hrv.rmssd.toFixed(0)}, SDNN ${hrv.sdnn.toFixed(0)}). Sit still and recalibrate.`, 'warn');
+    state.baselineMode = false;
+    return;
+  }
   recomputeAllBeatsAgainstTemplate();
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
   state.baseline = {hr:hrv.hr, sdnn:hrv.sdnn, rmssd:hrv.rmssd, pnn50:hrv.pnn50, lockedAt:tNow, beats:state.templateCount};
   state.baselineMode = false;
-  const dropped = state.beats.length - kept.length;
-  setStatus(`Twin baseline locked · HR ${hrv.hr.toFixed(0)} bpm, RMSSD ${hrv.rmssd.toFixed(0)} ms, ${state.templateCount} beats kept (${dropped} outliers dropped)`, 'ok');
+  const dropped_morph = state.beats.length - kept.length;
+  setStatus(`Twin baseline locked · HR ${hrv.hr.toFixed(0)} bpm, RMSSD ${hrv.rmssd.toFixed(0)} ms · kept ${state.templateCount} beats (dropped ${dropped_morph} morph outliers, ${dropped_rr} RR outliers)`, 'ok');
 }
 function resetTwin(){
   state.template = null; state.templateCount = 0; state.baseline = null; state.baselineMode = false;
@@ -1832,16 +1898,20 @@ function renderInsights(){
 function animate(){
   syncParams();
   updateRates();
-  // SQI
   const now = performance.now();
+  // SQI throttled to ~3 Hz
   if (now - state.lastSQICalc > 300){ computeSQI(); state.lastSQICalc = now; }
-  // R-peaks
-  if (state.e_x.length > 50) rpeak.detect(state.e_x, state.e_y);
-  // Pulse foot + PAT
-  if (state.t_x.length > 50 && state.rPeaksT.length) foot.detect(state.t_x, state.t_y, state.rPeaksT);
-  if (state.rPeaksT.length && state.feetT.length) ptt.compute(state.rPeaksT, state.feetT);
-  // Beats
-  processNewBeats();
+  // R-peak detection: throttle to 5 Hz. Sorting + MAD on a 4 s window every
+  // animation frame (~60 Hz) was starving the BLE event loop, causing
+  // GATT timeouts and "Cannot retrieve services" errors. 5 Hz is enough —
+  // R-peaks come at most ~3 Hz physiologically.
+  if (state.e_x.length > 50 && now - state.lastDetectCalc > 200){
+    rpeak.detect(state.e_x, state.e_y);
+    if (state.t_x.length > 50 && state.rPeaksT.length) foot.detect(state.t_x, state.t_y, state.rPeaksT);
+    if (state.rPeaksT.length && state.feetT.length) ptt.compute(state.rPeaksT, state.feetT);
+    processNewBeats();
+    state.lastDetectCalc = now;
+  }
   // HRV time
   if (now - state.lastHRVCalc > 1500){
     const rrAll = [];
@@ -1863,7 +1933,6 @@ function animate(){
   if (now - state.lastFreqHRVCalc > 6000){
     const fr = computeHRVFreq(state.rPeaksT);
     if (fr){ state.hrv.lf = fr.lf; state.hrv.hf = fr.hf; state.hrv.lfHf = fr.lfHf; }
-    // Spectrogram column
     if (now - state.spectrogram.lastCalc > 6000){
       const col = computeSpectrogramColumn();
       if (col){
@@ -1878,23 +1947,26 @@ function animate(){
   state.twinDivergence = computeDivergence();
   state.twinState = inferState();
   logStateChange();
-  // Render
   renderMetrics();
   renderTwinHero();
   if (now - state.lastInsightsRefresh > 2000){ renderBeatStrip(); renderInsights(); state.lastInsightsRefresh = now; }
-  // Plots
-  const lastT = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
-  const xMax = Math.max(lastT, 1);
-  const wSec = clamp(Number(els.windowSec.value) || 6, 1, 60);
-  const xMin = Math.max(0, xMax-wSec);
-  drawEcg(xMin, xMax+0.3);
-  drawTemplate();
-  drawRR(Math.max(0, xMax - Math.max(30, wSec*4)), xMax+0.3);
-  drawPoincare();
-  drawSpectrogram();
-  drawTrend();
-  drawPat(xMin, xMax+0.3);
-  drawTribo(xMin, xMax+0.3);
+  // Plots: throttle to ~20 Hz to free the main thread for BLE callbacks.
+  // 20 Hz is way above what the eye perceives as smooth on time-series data.
+  if (now - state.lastPlotDraw > 50){
+    const lastT = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
+    const xMax = Math.max(lastT, 1);
+    const wSec = clamp(Number(els.windowSec.value) || 6, 1, 60);
+    const xMin = Math.max(0, xMax-wSec);
+    drawEcg(xMin, xMax+0.3);
+    drawTemplate();
+    drawRR(Math.max(0, xMax - Math.max(30, wSec*4)), xMax+0.3);
+    drawPoincare();
+    drawSpectrogram();
+    drawTrend();
+    drawPat(xMin, xMax+0.3);
+    drawTribo(xMin, xMax+0.3);
+    state.lastPlotDraw = now;
+  }
   state.animationHandle = requestAnimationFrame(animate);
 }
 
