@@ -12,7 +12,23 @@ body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Aria
 .wrap{max-width:1280px;margin:0 auto;padding:8px 12px}
 h1{margin:0 0 2px;font-size:1.05rem;font-weight:700}
 .sub{color:var(--muted);font-size:.78rem;margin-bottom:8px}
-.grid{display:grid;grid-template-columns:1.25fr .75fr;gap:10px}
+.grid{display:grid;grid-template-columns:1.35fr .6fr;gap:10px}
+body.collapsed .grid{grid-template-columns:1fr}
+body.collapsed .grid > div:nth-child(2){display:none}
+
+/* compact unified top bar: orb + state + metrics + actions in one row */
+.topbar{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:6px 10px;margin-bottom:8px;background:linear-gradient(135deg,rgba(91,33,182,.16) 0%,rgba(16,26,46,.94) 60%);border:1px solid #3b2466;border-radius:10px}
+.topbar-metrics{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.topbar-metrics .m{background:rgba(22,34,60,.7);border:1px solid #243553;border-radius:6px;padding:3px 6px;min-width:0}
+.topbar-metrics .mk{color:var(--muted);font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;line-height:1}
+.topbar-metrics .mv{font-size:.85rem;font-weight:700;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-metrics .md{font-size:.58rem;color:var(--muted);line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-metrics .md.up{color:#fca5a5}.topbar-metrics .md.dn{color:#86efac}
+.topbar-actions{display:flex;gap:4px}
+.topbar-actions .tb-btn{min-height:30px;padding:4px 10px;font-size:.78rem;font-weight:600;min-width:0}
+@media(max-width:1280px){.topbar-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:920px){.topbar{grid-template-columns:auto 1fr;grid-template-rows:auto auto auto}.topbar-metrics{grid-column:1/-1;grid-template-columns:repeat(4,minmax(0,1fr))}.topbar-actions{grid-column:1/-1;justify-content:flex-end}}
+@media(max-width:520px){.topbar-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .card{background:rgba(16,26,46,.94);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
 .twin-hero{background:linear-gradient(135deg,rgba(91,33,182,.18) 0%,rgba(16,26,46,.94) 60%);border:1px solid #3b2466;border-radius:12px;padding:10px 12px;margin-bottom:10px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
 .twin-orb{width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#c4b5fd 0%,#7c3aed 45%,#4c1d95 100%);box-shadow:0 0 22px rgba(139,92,246,.35),inset 0 0 16px rgba(0,0,0,.5);position:relative;flex-shrink:0;transition:.4s ease}
@@ -63,9 +79,9 @@ input[type=checkbox]{transform:scale(1.2)}
 .plot-title .badge.q.marginal::before{background:var(--qm)}
 .plot-title .badge.q.poor::before{background:var(--qp)}
 .plot-title .badge.q.idle::before{background:#475569}
-canvas.plot{width:100%;height:180px;display:block;background:#091120;border:1px solid #223253;border-radius:12px;touch-action:manipulation}
-canvas.plot.tall{height:200px}
-canvas.plot.short{height:120px}
+canvas.plot{width:100%;height:160px;display:block;background:#091120;border:1px solid #223253;border-radius:12px;touch-action:manipulation}
+canvas.plot.tall{height:240px}
+canvas.plot.short{height:110px}
 canvas.plot.square{aspect-ratio:1;height:auto}
 .dual-plot{display:grid;grid-template-columns:280px 1fr;gap:12px}
 @media(max-width:920px){.dual-plot{grid-template-columns:1fr}}
@@ -94,6 +110,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
 @media(max-width:1100px){.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:920px){.grid{grid-template-columns:1fr}.controls{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,minmax(0,1fr))}canvas.plot{height:180px}canvas.plot.tall{height:200px}canvas.plot.short{height:130px}.twin-hero{grid-template-columns:auto 1fr}.twin-actions{grid-column:1/-1;flex-direction:row}.twin-actions button{flex:1;min-width:0}.twin-orb{width:48px;height:48px}.twin-state{font-size:1rem}}
 @media(max-width:520px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:921px){.grid > div:nth-child(2){position:sticky;top:8px;align-self:start;max-height:calc(100vh - 16px);overflow-y:auto}}
 </style>
 </head>
 <body>
@@ -101,29 +118,27 @@ details.collapsible[open]>summary::after{content:' ▴'}
 <h1>Cardiac Digital Twin</h1>
 <div class="sub">Personalized ECG model · BLE live · MAX30003 + triboelectric pulse</div>
 
-<div class="twin-hero">
+<!-- ===== UNIFIED COMPACT TOP BAR ===== -->
+<div class="topbar">
   <div id="twinOrb" class="twin-orb idle"></div>
   <div class="twin-info">
-    <div class="twin-state-label">Twin state</div>
     <div class="twin-state" id="twinState">Awaiting signal</div>
-    <div class="twin-divergence" id="twinDivergence">Connect device, then tap "Calibrate baseline" while at rest to seed your twin.</div>
+    <div class="twin-divergence" id="twinDivergence">Connect, then calibrate baseline at rest.</div>
   </div>
-  <div class="twin-actions">
-    <button id="calibrateBtn" class="twin">Calibrate baseline</button>
-    <button id="resetTwinBtn" class="secondary">Reset twin</button>
+  <div class="topbar-metrics">
+    <div class="m"><div class="mk">HR</div><div class="mv" id="hrValue">—</div><div class="md flat" id="hrDelta">—</div></div>
+    <div class="m"><div class="mk">SDNN</div><div class="mv" id="sdnnValue">—</div><div class="md flat" id="sdnnDelta">—</div></div>
+    <div class="m"><div class="mk">RMSSD</div><div class="mv" id="rmssdValue">—</div><div class="md flat" id="rmssdDelta">—</div></div>
+    <div class="m"><div class="mk">pNN50</div><div class="mv" id="pnn50Value">—</div><div class="md flat" id="pnn50Delta">—</div></div>
+    <div class="m"><div class="mk">LF/HF</div><div class="mv" id="lfhfValue">—</div><div class="md flat" id="lfhfDelta">—</div></div>
+    <div class="m"><div class="mk">SD1·2</div><div class="mv" id="sdvalues">— · —</div><div class="md flat">Poincaré</div></div>
+    <div class="m"><div class="mk">DIV</div><div class="mv" id="divergenceValue">—</div><div class="md flat" id="divergenceDelta">—</div></div>
+    <div class="m"><div class="mk">PAT</div><div class="mv" id="patValue">—</div><div class="md flat" id="patDelta">—</div></div>
   </div>
-</div>
-
-<div class="card" style="margin-bottom:10px;padding:8px 10px">
-  <div class="metrics">
-    <div class="metric"><div class="k">Heart rate</div><div class="v" id="hrValue">— <span class="u">bpm</span></div><div class="delta flat" id="hrDelta">vs baseline: —</div></div>
-    <div class="metric"><div class="k">SDNN</div><div class="v" id="sdnnValue">— <span class="u">ms</span></div><div class="delta flat" id="sdnnDelta">vs baseline: —</div></div>
-    <div class="metric"><div class="k">RMSSD</div><div class="v" id="rmssdValue">— <span class="u">ms</span></div><div class="delta flat" id="rmssdDelta">vs baseline: —</div></div>
-    <div class="metric"><div class="k">pNN50</div><div class="v" id="pnn50Value">— <span class="u">%</span></div><div class="delta flat" id="pnn50Delta">vs baseline: —</div></div>
-    <div class="metric"><div class="k">LF / HF</div><div class="v" id="lfhfValue">—</div><div class="delta flat" id="lfhfDelta">autonomic balance</div></div>
-    <div class="metric"><div class="k">SD1 · SD2</div><div class="v" id="sdvalues">— · —</div><div class="delta flat">Poincaré widths (ms)</div></div>
-    <div class="metric"><div class="k">Twin divergence</div><div class="v" id="divergenceValue">— <span class="u">%</span></div><div class="delta flat" id="divergenceDelta">low / mid / high</div></div>
-    <div class="metric"><div class="k">PAT</div><div class="v" id="patValue">— <span class="u">ms</span></div><div class="delta flat" id="patDelta">R-peak → pulse foot</div></div>
+  <div class="topbar-actions">
+    <button id="calibrateBtn" class="twin tb-btn">Calibrate</button>
+    <button id="resetTwinBtn" class="secondary tb-btn">Reset</button>
+    <button id="toggleSideBtn" class="secondary tb-btn" title="Toggle controls panel">☰</button>
   </div>
 </div>
 
@@ -337,18 +352,76 @@ function configFilters(){
   ecgHP.reset(); ecgLP.reset();
 }
 configFilters();
-function filterSample(x){ return state.filterEnabled ? ecgLP.process(ecgHP.process(x)) : x; }
+// ============== ROBUST SAMPLE CLIPPER ==============
+// Runs BEFORE the filter biquads. Tracks a running median + MAD of recent raw
+// samples; clips any incoming sample whose deviation exceeds CLIP_K * MAD.
+// Without this, one huge motion spike rings through the high-pass for ~1 s,
+// elevates the R-peak detector threshold, and silently rejects real beats.
+const CLIP_BUF_LEN = 256;            // ~2 s at 128 Hz
+const CLIP_K = 8;                    // clip beyond 8 * MAD
+const clipBuf = new Float32Array(CLIP_BUF_LEN);
+let clipBufIdx = 0;
+let clipBufFilled = 0;
+let clipMedian = 0, clipMAD = 1;
+let clipRecalcCounter = 0;
+
+function pushClipSample(x){
+  clipBuf[clipBufIdx] = x;
+  clipBufIdx = (clipBufIdx + 1) % CLIP_BUF_LEN;
+  if (clipBufFilled < CLIP_BUF_LEN) clipBufFilled++;
+}
+function recalcClipStats(){
+  // Recompute median and MAD over the buffer
+  const n = clipBufFilled;
+  if (n < 32) { clipMedian = 0; clipMAD = 1; return; }
+  const arr = new Float32Array(n);
+  for (let i=0;i<n;i++) arr[i] = clipBuf[i];
+  arr.sort();
+  clipMedian = arr[n>>1];
+  // MAD = median of |x - median|
+  const dev = new Float32Array(n);
+  for (let i=0;i<n;i++) dev[i] = Math.abs(arr[i] - clipMedian);
+  dev.sort();
+  clipMAD = Math.max(1, dev[n>>1]);
+}
+function clipRawSample(x){
+  // Push to buffer first so steady-state values are still tracked, but only
+  // push the CLIPPED value so a huge spike never enters our running stats.
+  if (clipBufFilled < 32){
+    pushClipSample(x);
+    if ((++clipRecalcCounter & 31) === 0) recalcClipStats();
+    return x;
+  }
+  const limit = CLIP_K * clipMAD;
+  let y = x;
+  if (x > clipMedian + limit) y = clipMedian + limit;
+  else if (x < clipMedian - limit) y = clipMedian - limit;
+  pushClipSample(y);
+  if ((++clipRecalcCounter & 31) === 0) recalcClipStats();
+  return y;
+}
+function resetClipper(){
+  clipBufIdx = 0; clipBufFilled = 0; clipMedian = 0; clipMAD = 1; clipRecalcCounter = 0;
+}
+
+function filterSample(x){
+  const clipped = clipRawSample(x);
+  return state.filterEnabled ? ecgLP.process(ecgHP.process(clipped)) : clipped;
+}
 
 // ============== SQI ==============
-function classifyQuality(std, drift, ptp){
-  if (ptp < 5) return 'poor';
-  if (drift > std * 4) return 'poor';
-  if (drift > std * 2) return 'marginal';
-  if (std < 8) return 'marginal';
+function classifyQuality(std, drift, ptp, spikeRate, jumpStd){
+  // Hard fails first
+  if (ptp < 5) return 'poor';                       // flat / saturated / off
+  if (drift > std * 4) return 'poor';               // huge baseline shift
+  if (spikeRate > 0.04) return 'poor';              // >4% of samples are big jumps
+  if (jumpStd > std * 2.5) return 'poor';           // diff signal much louder than signal itself
+  if (drift > std * 2 || spikeRate > 0.015 || jumpStd > std * 1.5) return 'marginal';
+  if (std < 8) return 'marginal';                   // very low variation - probably no contact
   return 'good';
 }
 function computeSQI(){
-  const W=1.5;
+  const W = 1.5;
   if (state.e_x.length < ECG_FS*W) return;
   const tEnd = state.e_x[state.e_x.length-1];
   const tStart = tEnd - W;
@@ -357,19 +430,32 @@ function computeSQI(){
   const slice = state.e_y.slice(i0);
   const n = slice.length;
   if (n < 30) return;
+  // Mean / std / range
   let sum=0, sum2=0, mn=Infinity, mx=-Infinity;
   for (const x of slice){ sum+=x; sum2+=x*x; if(x<mn)mn=x; if(x>mx)mx=x; }
   const mean = sum/n;
   const std = Math.sqrt(Math.max(0, sum2/n - mean*mean));
   const ptp = mx - mn;
+  // Drift
   const q = Math.max(2, Math.floor(n/4));
   let m1=0, m2=0;
   for (let i=0;i<q;i++) m1+=slice[i];
   for (let i=n-q;i<n;i++) m2+=slice[i];
   m1/=q; m2/=q;
   const drift = Math.abs(m2-m1);
-  const level = classifyQuality(std, drift, ptp);
-  state.sqiSamples.push({t:tEnd, level, std, drift, ptp});
+  // Spikes: count samples where |diff| exceeds 4*std of smoothed diff
+  let dSum=0, dSum2=0;
+  for (let i=1;i<n;i++){ const d = slice[i]-slice[i-1]; dSum+=d; dSum2+=d*d; }
+  const dMean = dSum/(n-1);
+  const dVar = Math.max(0, dSum2/(n-1) - dMean*dMean);
+  const jumpStd = Math.sqrt(dVar);
+  let spikes = 0;
+  const spikeThr = Math.max(50, 4*jumpStd);   // floor so quiet signals don't false-trigger
+  for (let i=1;i<n;i++) if (Math.abs(slice[i]-slice[i-1]) > spikeThr) spikes++;
+  const spikeRate = spikes / (n-1);
+
+  const level = classifyQuality(std, drift, ptp, spikeRate, jumpStd);
+  state.sqiSamples.push({t:tEnd, level, std, drift, ptp, spikeRate, jumpStd});
   if (state.sqiSamples.length > 600) state.sqiSamples.shift();
   state.signalQuality = level;
 }
@@ -394,17 +480,28 @@ class RPeakDetector {
     while (s < times.length && times[s] < tEnd - this.windowS) s++;
     const t = times.slice(s), v = values.slice(s);
     if (v.length < 10) return;
-    let mn=Infinity, mx=-Infinity, sum=0;
-    for (const x of v){ if(x<mn)mn=x; if(x>mx)mx=x; sum+=x; }
-    const range = mx - mn;
-    if (range < 10) return;
-    const mean = sum / v.length;
-    const thr = mean + range * this.thresholdFactor;
+    // Robust statistics: median + MAD instead of mean+range. A single artifact
+    // spike no longer balloons the threshold and silences real peaks.
+    const sorted = v.slice().sort((a,b)=>a-b);
+    const median = sorted[sorted.length>>1];
+    const dev = new Array(v.length);
+    for (let i=0;i<v.length;i++) dev[i] = Math.abs(v[i] - median);
+    dev.sort((a,b)=>a-b);
+    const mad = Math.max(1, dev[dev.length>>1]);
+    // Robust upper bound — equivalent to ~95th percentile of normal beats
+    const robustHigh = median + mad * 6;     // beat amplitude ceiling
+    if (robustHigh - median < 10) return;     // no meaningful signal
+    // Threshold scales between median and robustHigh based on user knob.
+    // user 0.1 -> low/sensitive, 0.9 -> high/strict.
+    const thr = median + (robustHigh - median) * this.thresholdFactor;
     const dt = Math.max(1e-6, (t[t.length-1]-t[0])/Math.max(1,t.length-1));
     const minD = Math.max(1, Math.round(this.refractoryS / dt));
     const peaks = [];
     let last = -minD;
     for (let i=1;i<v.length-1;i++){
+      // Reject obvious artifact spikes: peak must be below an upper bound
+      // (10x MAD above median). Real R-peaks rarely exceed this.
+      if (v[i] > median + mad * 14) continue;
       if (v[i]>thr && v[i]>=v[i-1] && v[i]>v[i+1]){
         if (i - last >= minD){ peaks.push(i); last = i; }
         else if (peaks.length > 0 && v[i] > v[peaks[peaks.length-1]]){ peaks[peaks.length-1] = i; last = i; }
@@ -543,18 +640,48 @@ function processNewBeats(){
   for (let i=0;i<state.rPeaksT.length;i++){
     const rt = state.rPeaksT[i];
     if (state.processedBeatTimes.has(rt)) continue;
-    if (reject && !state.baselineMode){
+    // Reject beats whose surrounding signal quality is poor.
+    // CRITICAL: also reject during baseline mode — otherwise an artifact during
+    // the 60s calibration permanently corrupts the personal template.
+    if (reject){
       const q = sqiAt(rt);
-      if (q === 'poor'){ state.processedBeatTimes.add(rt); continue; }
+      if (q === 'poor' || q === 'idle'){ state.processedBeatTimes.add(rt); continue; }
     }
     const beat = extractBeat(rt);
     if (!beat) continue;
+
+    // Sanity check the beat itself: peak amplitude should dominate everything else.
+    // If max(|beat|) outside the QRS region (>120 ms either side of R) is comparable
+    // to the R-peak amplitude, this is almost certainly an artifact.
+    const qrsHalf = Math.round(0.06 * ECG_FS);
+    let outsideMax = 0;
+    for (let k=0;k<BEAT_LEN;k++){
+      if (Math.abs(k - BEFORE) <= qrsHalf) continue;
+      const a = Math.abs(beat[k]);
+      if (a > outsideMax) outsideMax = a;
+    }
+    if (outsideMax > 1.5){
+      // beat is normalized so R = ±1 — outside-QRS energy >1.5 means motion / step
+      state.processedBeatTimes.add(rt);
+      continue;
+    }
+
     let rr = null;
     if (i > 0) rr = (rt - state.rPeaksT[i-1])*1000;
     const sim = beatSimilarity(beat);
     const cls = classifyBeat(rt, rr, sim);
     const rec = {t:rt, v:beat, rr, hr: rr ? 60000/rr : null, cls, sim};
-    const accept = state.baselineMode || (cls === 'normal' && rr !== null && rr > 400 && rr < 1500);
+    // Template only updates with high-confidence normal beats. During baseline
+    // mode we are stricter than before: require sim > 0.8 against current
+    // running template once it has at least 5 contributors. First few beats go
+    // in unconditionally to seed it.
+    let accept;
+    if (state.baselineMode){
+      if (state.templateCount < 5) accept = (rr !== null && rr > 400 && rr < 1500);
+      else accept = (sim !== null && sim > 0.80 && rr !== null && rr > 400 && rr < 1500);
+    } else {
+      accept = (cls === 'normal' && rr !== null && rr > 400 && rr < 1500);
+    }
     if (accept) updateTemplate(beat);
     state.beats.push(rec);
     state.classCounts[cls] = (state.classCounts[cls]||0) + 1;
@@ -890,8 +1017,8 @@ function clearData(){
   state.classCounts = {normal:0,pvc:0,pac:0,abnormal:0,unknown:0};
   state.hrv = {hr:null,sdnn:null,rmssd:null,pnn50:null,lf:null,hf:null,lfHf:null,sd1:null,sd2:null};
   state.twinDivergence = null; state.signalQuality = 'idle'; state.spectrogram.columns = []; state.sessionStart = null;
-  ecgHP.reset(); ecgLP.reset();
-  els.patValue.innerHTML = '— <span class="u">ms</span>';
+  ecgHP.reset(); ecgLP.reset(); resetClipper();
+  els.patValue.textContent = '—';
   setStatus(state.isConnected ? 'Connected. Cleared.' : 'Cleared.', state.isConnected ? 'ok' : 'warn');
 }
 function startCalibration(){
@@ -906,22 +1033,45 @@ function startCalibration(){
   setStatus(`Calibrating · stay still for ${dur}s`, 'twin');
 }
 function finalizeCalibration(){
+  // Need at least a handful of beats with a current template to finalize.
+  if (state.beats.length < 10 || !state.template){
+    setStatus('Baseline incomplete · not enough clean beats. Recalibrate.', 'warn');
+    state.baselineMode = false;
+    return;
+  }
+  // ===== Outlier rejection =====
+  // Score every collected baseline beat vs the running template, drop the worst
+  // 15% (lowest similarity), then rebuild the template as the mean of the
+  // surviving high-similarity beats. This removes any artifact that slipped
+  // through SQI gating during calibration.
+  const sims = state.beats.map(b => ({ b, sim: beatSimilarity(b.v) ?? -1 }));
+  sims.sort((a, b) => b.sim - a.sim);                  // highest first
+  const keepN = Math.max(8, Math.floor(sims.length * 0.85));
+  const kept = sims.slice(0, keepN);
+  // Rebuild template as plain mean of kept beats
+  const tpl = new Array(BEAT_LEN).fill(0);
+  for (const k of kept) for (let i=0;i<BEAT_LEN;i++) tpl[i] += k.b.v[i];
+  for (let i=0;i<BEAT_LEN;i++) tpl[i] /= kept.length;
+  state.template = tpl;
+  state.templateCount = kept.length;
+
+  // RR series only from kept beats — outliers excluded from baseline HRV too.
+  const keptT = new Set(kept.map(k => k.b.t));
   const rrAll = [];
-  for (let i=1;i<state.rPeaksT.length;i++){
-    const a = state.rPeaksT[i-1], b = state.rPeaksT[i];
-    if (a < state.baselineStart) continue;
-    const rr = (b-a)*1000;
-    if (rr > 300 && rr < 2000) rrAll.push(rr);
+  for (const b of state.beats){
+    if (!keptT.has(b.t)) continue;
+    if (b.rr != null && b.rr > 300 && b.rr < 2000) rrAll.push(b.rr);
   }
   const hrv = computeHRVTime(rrAll);
-  if (!hrv){ setStatus('Baseline incomplete · not enough beats.', 'warn'); state.baselineMode = false; return; }
-  // KEY FIX: re-score every collected beat against the now-locked template, so
-  // post-baseline divergence does not spike from stale immature-template sims.
+  if (!hrv){ setStatus('Baseline incomplete · not enough clean beats. Recalibrate.', 'warn'); state.baselineMode = false; return; }
+  // Re-score every stored beat against the now-final template so post-baseline
+  // divergence starts at zero rather than spiking from immature-template scores.
   recomputeAllBeatsAgainstTemplate();
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
   state.baseline = {hr:hrv.hr, sdnn:hrv.sdnn, rmssd:hrv.rmssd, pnn50:hrv.pnn50, lockedAt:tNow, beats:state.templateCount};
   state.baselineMode = false;
-  setStatus(`Twin baseline locked · HR ${hrv.hr.toFixed(0)} bpm, RMSSD ${hrv.rmssd.toFixed(0)} ms, ${state.templateCount} beats`, 'ok');
+  const dropped = state.beats.length - kept.length;
+  setStatus(`Twin baseline locked · HR ${hrv.hr.toFixed(0)} bpm, RMSSD ${hrv.rmssd.toFixed(0)} ms, ${state.templateCount} beats kept (${dropped} outliers dropped)`, 'ok');
 }
 function resetTwin(){
   state.template = null; state.templateCount = 0; state.baseline = null; state.baselineMode = false;
@@ -1522,48 +1672,48 @@ function syncParams(){
   state.filterEnabled = els.filterEnable.checked;
 }
 function setDelta(el, v, base, lowerBetter=false){
-  if (v == null || base == null){ el.textContent = 'vs baseline: —'; el.className = 'delta flat'; return; }
+  if (v == null || base == null){ el.textContent = '—'; el.className = 'md flat'; return; }
   const d = v - base;
   const pct = (d / base) * 100;
   const ar = d > 0 ? '↑' : d < 0 ? '↓' : '·';
-  el.textContent = `${ar} ${Math.abs(pct).toFixed(0)}% vs base`;
+  el.textContent = `${ar}${Math.abs(pct).toFixed(0)}%`;
   const isElevated = d > 0;
   const isBad = lowerBetter ? isElevated : !isElevated;
-  if (Math.abs(pct) < 5) el.className = 'delta flat';
-  else el.className = 'delta ' + (isBad ? 'up' : 'dn');
+  if (Math.abs(pct) < 5) el.className = 'md flat';
+  else el.className = 'md ' + (isBad ? 'up' : 'dn');
 }
 function renderMetrics(){
   const h = state.hrv, b = state.baseline;
-  els.hrValue.innerHTML = `${fmtN(h.hr,0)} <span class="u">bpm</span>`;
-  els.sdnnValue.innerHTML = `${fmtN(h.sdnn,0)} <span class="u">ms</span>`;
-  els.rmssdValue.innerHTML = `${fmtN(h.rmssd,0)} <span class="u">ms</span>`;
-  els.pnn50Value.innerHTML = `${fmtN(h.pnn50,1)} <span class="u">%</span>`;
-  els.lfhfValue.textContent = fmtN(h.lfHf,2);
-  els.sdvalues.textContent = `${fmtN(h.sd1,0)} · ${fmtN(h.sd2,0)}`;
+  els.hrValue.textContent = fmtN(h.hr, 0);
+  els.sdnnValue.textContent = fmtN(h.sdnn, 0);
+  els.rmssdValue.textContent = fmtN(h.rmssd, 0);
+  els.pnn50Value.textContent = fmtN(h.pnn50, 1);
+  els.lfhfValue.textContent = fmtN(h.lfHf, 2);
+  els.sdvalues.textContent = `${fmtN(h.sd1,0)}·${fmtN(h.sd2,0)}`;
   setDelta(els.hrDelta, h.hr, b ? b.hr : null, false);
   setDelta(els.sdnnDelta, h.sdnn, b ? b.sdnn : null, true);
   setDelta(els.rmssdDelta, h.rmssd, b ? b.rmssd : null, true);
   setDelta(els.pnn50Delta, h.pnn50, b ? b.pnn50 : null, true);
   if (h.lfHf != null){
-    els.lfhfDelta.textContent = h.lfHf > 2.5 ? 'sympathetic-dominant' : h.lfHf < 0.8 ? 'parasympathetic-dominant' : 'balanced';
-    els.lfhfDelta.className = 'delta flat';
+    els.lfhfDelta.textContent = h.lfHf > 2.5 ? 'sympatic' : h.lfHf < 0.8 ? 'parasymp' : 'balanced';
+    els.lfhfDelta.className = 'md flat';
   }
   if (state.twinDivergence != null){
-    els.divergenceValue.innerHTML = `${state.twinDivergence} <span class="u">%</span>`;
+    els.divergenceValue.textContent = `${state.twinDivergence}%`;
     const lvl = state.twinDivergence < 25 ? 'low' : state.twinDivergence < 55 ? 'mid' : 'high';
-    els.divergenceDelta.textContent = `${lvl} divergence`;
+    els.divergenceDelta.textContent = lvl;
+    els.divergenceDelta.className = 'md flat';
   }
   if (state.patValues.length){
     const last = state.patValues[state.patValues.length-1];
     const lN = state.patValues.slice(-10);
     const avg = lN.reduce((a,b)=>a+b,0)/lN.length;
-    els.patValue.innerHTML = `${last.toFixed(0)} <span class="u">ms</span>`;
-    els.patDelta.textContent = `avg: ${avg.toFixed(0)} ms`;
+    els.patValue.textContent = `${last.toFixed(0)}`;
+    els.patDelta.textContent = `avg ${avg.toFixed(0)}`;
     els.patBadge.textContent = `${avg.toFixed(0)} ms avg`;
   }
   els.templateBadge.textContent = `${state.templateCount} beats`;
   els.rrBadge.textContent = `${state.beats.filter(b => b.rr != null).length} RR`;
-  // Quality badge
   const q = state.signalQuality;
   els.qualityBadge.className = `badge q ${q}`;
   els.qualityBadge.textContent = q === 'good' ? 'signal: good' : q === 'marginal' ? 'signal: marginal' : q === 'poor' ? 'signal: poor' : 'signal: —';
@@ -1572,7 +1722,7 @@ function renderTwinHero(){
   if (!state.isConnected && !state.beats.length){
     els.twinOrb.className = 'twin-orb idle';
     els.twinState.textContent = 'Awaiting signal';
-    els.twinDivergence.textContent = 'Connect device, then tap "Calibrate baseline" to seed your twin.';
+    els.twinDivergence.textContent = 'Connect, then calibrate at rest.';
     return;
   }
   if (state.baselineMode){
@@ -1580,24 +1730,24 @@ function renderTwinHero(){
     const dur = Number(els.baselineDur.value) || 60;
     const elapsed = (state.e_x[state.e_x.length-1] || 0) - state.baselineStart;
     const remain = Math.max(0, dur-elapsed);
-    els.twinState.textContent = 'Calibrating baseline';
-    els.twinDivergence.innerHTML = `<b>${remain.toFixed(0)}s</b> remaining · ${state.templateCount} beats captured`;
+    els.twinState.textContent = 'Calibrating';
+    els.twinDivergence.innerHTML = `<b>${remain.toFixed(0)}s</b> · ${state.templateCount} beats`;
     if (remain <= 0) finalizeCalibration();
     return;
   }
   if (!state.baseline){
     els.twinOrb.className = 'twin-orb idle';
-    els.twinState.textContent = 'No baseline yet';
-    els.twinDivergence.textContent = 'Tap "Calibrate baseline" while at rest to seed your twin.';
+    els.twinState.textContent = 'No baseline';
+    els.twinDivergence.textContent = 'Tap Calibrate at rest.';
     return;
   }
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
   const inWarmup = tNow - state.baseline.lockedAt < 6;
   const s = state.twinState;
   els.twinOrb.className = `twin-orb ${orbClass(s)}`;
-  els.twinState.textContent = inWarmup ? 'Stabilizing...' : stateLabel(s);
+  els.twinState.textContent = inWarmup ? 'Stabilizing…' : stateLabel(s);
   const div = state.twinDivergence;
-  els.twinDivergence.innerHTML = `Divergence <b>${div != null ? div+'%' : '—'}</b> · HR <b>${fmtN(state.hrv.hr,0)}</b> bpm · RMSSD <b>${fmtN(state.hrv.rmssd,0)}</b> ms`;
+  els.twinDivergence.innerHTML = `Div <b>${div != null ? div+'%' : '—'}</b> · ${state.signalQuality}`;
 }
 function renderBeatStrip(){
   const last = state.beats.slice(-80);
@@ -1724,7 +1874,7 @@ function init(){
   ['rpThresh','rpRefract','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => document.getElementById(id).addEventListener('input', syncParams));
   els.hpCut.addEventListener('change', configFilters);
   els.lpCut.addEventListener('change', configFilters);
-  els.filterEnable.addEventListener('change', () => { state.filterEnabled = els.filterEnable.checked; ecgHP.reset(); ecgLP.reset(); });
+  els.filterEnable.addEventListener('change', () => { state.filterEnabled = els.filterEnable.checked; ecgHP.reset(); ecgLP.reset(); resetClipper(); });
   els.connectBtn.addEventListener('click', connectBle);
   els.reconnectBtn.addEventListener('click', reconnectLast);
   els.disconnectBtn.addEventListener('click', disconnectBle);
@@ -1735,6 +1885,8 @@ function init(){
   els.closeReportBtn.addEventListener('click', () => els.reportCard.style.display = 'none');
   els.calibrateBtn.addEventListener('click', startCalibration);
   els.resetTwinBtn.addEventListener('click', resetTwin);
+  const toggleBtn = document.getElementById('toggleSideBtn');
+  if (toggleBtn) toggleBtn.addEventListener('click', () => document.body.classList.toggle('collapsed'));
   syncParams();
   setConnUI(false);
   refreshReconnect();
