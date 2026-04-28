@@ -91,6 +91,7 @@ canvas.plot.tall{height:200px}
 canvas.plot.short{height:90px}
 canvas.plot.square{aspect-ratio:1;height:auto}
 .dual-plot{display:grid;grid-template-columns:240px 1fr;gap:8px}
+.dual-plot.split{grid-template-columns:1fr 1fr}
 @media(max-width:920px){.dual-plot{grid-template-columns:1fr}}
 .beat-strip{display:flex;gap:3px;padding:6px 4px;flex-wrap:wrap}
 .beat-pip{width:12px;height:18px;border-radius:3px;background:var(--normal);flex-shrink:0}
@@ -212,12 +213,14 @@ details.collapsible[open]>summary::after{content:' ▴'}
       </div>
     </div>
 
-    <div class="card plot-card" style="margin-top:6px">
-      <div class="plot-title"><span>HR &amp; HRV trend</span></div>
-      <canvas id="trendCanvas" class="plot short"></canvas>
-      <div class="legend">
-        <span><i style="background:var(--rpeak)"></i> Heart rate</span>
-        <span><i style="background:var(--twin)"></i> RMSSD</span>
+    <div class="dual-plot split" style="margin-top:6px">
+      <div class="card plot-card">
+        <div class="plot-title"><span>HR trend</span><span class="badge" id="hrTrendBadge">— bpm</span></div>
+        <canvas id="trendHRCanvas" class="plot short"></canvas>
+      </div>
+      <div class="card plot-card">
+        <div class="plot-title"><span>RMSSD trend</span><span class="badge" id="rmssdTrendBadge">— ms</span></div>
+        <canvas id="trendRMSSDCanvas" class="plot short"></canvas>
       </div>
     </div>
 
@@ -312,7 +315,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
 'use strict';
 
 const els = {};
-['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','leadChestBtn','leadFingersBtn','leadCustomBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','twaveWin','twaveWinVal','twaveRatio','twaveRatioVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
+['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','leadChestBtn','leadFingersBtn','leadCustomBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrTrendBadge','rmssdTrendBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','twaveWin','twaveWinVal','twaveRatio','twaveRatioVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendHRCanvas','trendRMSSDCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
 
 const C = {grid:'#1c2a47',gridSoft:'#152339',axis:'#7a8eb3',tribo:'#ff6b6b',ecg:'#5aa7ff',pat:'#37d67a',foot:'#ffd166',rpeak:'#ff4d6d',twin:'#a78bfa',bg:'#091120',normal:'#22c55e',pvc:'#ef4444',pac:'#f59e0b',abnormal:'#f97316',unknown:'#475569'};
 const CLS_COLOR = {normal:C.normal,pvc:C.pvc,pac:C.pac,abnormal:C.abnormal,unknown:C.unknown};
@@ -856,37 +859,49 @@ function relDiff(now, base){ if (base==null||base===0||now==null) return 0; retu
 function computeDivergence(){
   if (!state.baseline) return null;
   const tNow = state.e_x.length ? state.e_x[state.e_x.length-1] : 0;
-  // Longer warmup so the rolling HRV window settles on post-baseline beats
   if (tNow - state.baseline.lockedAt < 15) return 0;
   const b = state.baseline, h = state.hrv;
   const parts = [];
-  // HR: bidirectional - both up and down are interesting
+
+  // HR: percentage change with a 5 bpm floor so we don't trigger on tiny
+  // deltas when baseline HR happens to be very low (e.g. resting at 50 bpm).
   if (h.hr != null && b.hr != null){
-    parts.push(Math.min(1, Math.abs(relDiff(h.hr, b.hr))/0.5));
+    const absDelta = Math.abs(h.hr - b.hr);
+    const scale = Math.max(b.hr * 0.5, 5);   // 50% of baseline OR 5 bpm
+    parts.push(Math.min(1, absDelta / scale));
   }
-  // RMSSD: ONLY DECREASES count as divergence. Increased RMSSD = more
-  // parasympathetic tone = healthy / relaxed, NOT divergent. The previous
-  // bidirectional formula scored deeper rest as "alert" because RMSSD
-  // naturally rises when you sit still and breathe slowly.
+
+  // RMSSD: only DECREASES count. Use ABSOLUTE delta with a floor — this
+  // prevents false alerts when baseline RMSSD is unusually small (e.g. the
+  // user held their breath during calibration). A jump from 25→90 ms RMSSD
+  // is not divergence, just normal RSA returning. We require an absolute
+  // drop of at least max(20 ms, 60% of baseline) to count as full divergence.
   if (h.rmssd != null && b.rmssd != null){
-    const d = relDiff(h.rmssd, b.rmssd);
-    if (d < 0) parts.push(Math.min(1, Math.abs(d)/0.6));
-    else parts.push(0);
+    const drop = b.rmssd - h.rmssd;       // positive = RMSSD decreased
+    if (drop > 0){
+      const scale = Math.max(b.rmssd * 0.6, 20);
+      parts.push(Math.min(1, drop / scale));
+    } else parts.push(0);
   }
-  // SDNN: same — only decrease counts (loss of total variability = stress)
+
+  // SDNN: same logic — only decreases count, with absolute floor.
   if (h.sdnn != null && b.sdnn != null){
-    const d = relDiff(h.sdnn, b.sdnn);
-    if (d < 0) parts.push(Math.min(1, Math.abs(d)/0.6));
-    else parts.push(0);
+    const drop = b.sdnn - h.sdnn;
+    if (drop > 0){
+      const scale = Math.max(b.sdnn * 0.6, 25);
+      parts.push(Math.min(1, drop / scale));
+    } else parts.push(0);
   }
-  // Morphology: bidirectional (different shape = potentially abnormal)
+
+  // Morphology: bidirectional (any beat shape change is informative)
   const recent = state.beats.slice(-30);
   const sims = recent.map(x => x.sim).filter(x => x != null);
   if (sims.length >= 5){
     const ms = sims.reduce((a,b)=>a+b,0)/sims.length;
     parts.push(Math.min(1, Math.max(0, (1-ms)*2)));
   }
-  // Ectopic burden
+
+  // Ectopic burden over last 60 beats
   const last = state.beats.slice(-60);
   if (last.length >= 20){
     const ect = last.filter(b => b.cls === 'pvc' || b.cls === 'pac' || b.cls === 'abnormal').length;
@@ -1566,7 +1581,31 @@ function drawRR(xMin, xMax){
     if (b.t < xMin || b.t > xMax || b.rr == null) continue;
     ts.push(b.t); rrs.push(b.rr); cls.push(b.cls);
   }
-  const [yMin, yMax] = rrs.length ? [Math.max(300, Math.min(...rrs)-100), Math.max(...rrs)+100] : [400, 1200];
+  // Percentile-based Y range: use 5th–95th percentile of the visible RRs,
+  // then pad. A single huge outlier (e.g. a missed beat producing a 2-second
+  // gap) no longer blows the scale and squashes every other point onto a
+  // single line. Outlier dots still render — they just sit above/below the
+  // visible plot edge, with their value still readable from the gridlines.
+  let yMin, yMax;
+  if (rrs.length >= 4){
+    const sorted = rrs.slice().sort((a,b)=>a-b);
+    const lo = sorted[Math.floor(sorted.length*0.05)];
+    const hi = sorted[Math.floor(sorted.length*0.95)];
+    const span = Math.max(hi - lo, 80);             // minimum visible span
+    yMin = Math.max(300, lo - span*0.3);
+    yMax = hi + span*0.3;
+  } else if (rrs.length){
+    yMin = Math.max(300, Math.min(...rrs)-80);
+    yMax = Math.max(...rrs)+80;
+  } else {
+    yMin = 400; yMax = 1200;
+  }
+  // Include the baseline line in the visible range (if any)
+  if (state.baseline && state.baseline.hr){
+    const refRR = 60000 / state.baseline.hr;
+    yMin = Math.min(yMin, refRR - 30);
+    yMax = Math.max(yMax, refRR + 30);
+  }
   const m = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, 'ms');
   if (state.baseline && state.baseline.hr){
     const refRR = 60000 / state.baseline.hr;
@@ -1674,29 +1713,50 @@ function drawSpectrogram(){
   ctx.stroke();
   ctx.setLineDash([]);
 }
-function drawTrend(){
-  const {ctx, w, h} = setupCv(els.trendCanvas);
-  const tHR = state.trendHRtimes, vHR = state.trendHRvalues;
-  const tRM = state.trendRMSSDtimes, vRM = state.trendRMSSDvalues;
+function drawSingleTrend(canvas, t, v, color, baseline, unit){
+  const {ctx, w, h} = setupCv(canvas);
   let xMin = 0, xMax = 1;
-  const all = [...tHR, ...tRM];
-  if (all.length){ xMin = Math.min(...all); xMax = Math.max(...all); if (xMax-xMin < 1) xMax = xMin+1; }
-  const yMin = 0, yMax = 200;
-  const m = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, '');
-  drawLine(ctx, tRM, vRM, m, C.twin, 1.6);
-  const hrSc = vHR.map(v => clamp((v-40)*(200/120), 0, 200));
-  drawLine(ctx, tHR, hrSc, m, C.rpeak, 1.6);
-  if (state.baseline){
-    if (state.baseline.rmssd != null){
-      ctx.strokeStyle = C.twin; ctx.setLineDash([3,3]); ctx.lineWidth = 1;
-      ctx.beginPath(); const y = m.yMap(state.baseline.rmssd); ctx.moveTo(m.left, y); ctx.lineTo(m.left+m.pw, y); ctx.stroke();
+  if (t.length){ xMin = t[0]; xMax = t[t.length-1]; if (xMax-xMin < 1) xMax = xMin+1; }
+  // Auto-fit y from data + baseline reference (if any), with sensible padding.
+  let yMin, yMax;
+  if (v.length){
+    const mn = Math.min(...v), mx = Math.max(...v);
+    const span = Math.max(mx-mn, 5);
+    yMin = mn - span*0.15;
+    yMax = mx + span*0.15;
+    if (baseline != null){
+      yMin = Math.min(yMin, baseline - span*0.1);
+      yMax = Math.max(yMax, baseline + span*0.1);
     }
-    if (state.baseline.hr != null){
-      ctx.strokeStyle = C.rpeak; ctx.setLineDash([3,3]); ctx.lineWidth = 1;
-      ctx.beginPath(); const y = m.yMap(clamp((state.baseline.hr-40)*(200/120), 0, 200));
-      ctx.moveTo(m.left, y); ctx.lineTo(m.left+m.pw, y); ctx.stroke();
-    }
-    ctx.setLineDash([]);
+  } else {
+    yMin = 0; yMax = 100;
+  }
+  const m = drawAxes(ctx, w, h, xMin, xMax, yMin, yMax, unit);
+  // Baseline reference line
+  if (baseline != null && yMax > yMin){
+    ctx.strokeStyle = color; ctx.setLineDash([3,3]); ctx.lineWidth = 1; ctx.globalAlpha = 0.5;
+    ctx.beginPath(); const y = m.yMap(baseline);
+    ctx.moveTo(m.left, y); ctx.lineTo(m.left+m.pw, y);
+    ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  drawLine(ctx, t, v, m, color, 1.6);
+  // Last point as marker
+  if (t.length){
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(m.xMap(t[t.length-1]), m.yMap(v[v.length-1]), 3, 0, Math.PI*2); ctx.fill();
+  }
+}
+function drawTrendHR(){
+  drawSingleTrend(els.trendHRCanvas, state.trendHRtimes, state.trendHRvalues, C.rpeak, state.baseline ? state.baseline.hr : null, 'bpm');
+  if (els.hrTrendBadge && state.trendHRvalues.length){
+    els.hrTrendBadge.textContent = `${state.trendHRvalues[state.trendHRvalues.length-1].toFixed(0)} bpm`;
+  }
+}
+function drawTrendRMSSD(){
+  drawSingleTrend(els.trendRMSSDCanvas, state.trendRMSSDtimes, state.trendRMSSDvalues, C.twin, state.baseline ? state.baseline.rmssd : null, 'ms');
+  if (els.rmssdTrendBadge && state.trendRMSSDvalues.length){
+    els.rmssdTrendBadge.textContent = `${state.trendRMSSDvalues[state.trendRMSSDvalues.length-1].toFixed(0)} ms`;
   }
 }
 function drawPat(xMin, xMax){
@@ -1740,16 +1800,25 @@ function syncParams(){
   ptt.offsetMs = Number(els.pttOffset.value);
   state.filterEnabled = els.filterEnable.checked;
 }
-function setDelta(el, v, base, lowerBetter=false){
+function setDelta(el, v, base, lowerBetter=false, floor=null){
   if (v == null || base == null){ el.textContent = '—'; el.className = 'md flat'; return; }
   const d = v - base;
   const pct = (d / base) * 100;
   const ar = d > 0 ? '↑' : d < 0 ? '↓' : '·';
   el.textContent = `${ar}${Math.abs(pct).toFixed(0)}%`;
+  // "Bad" coloring uses an absolute floor on top of the percentage so very
+  // small absolute swings on a tiny baseline don't paint the chip red.
+  // Default floor: 10% AND at least the optional absolute floor.
+  const minPctSignificant = 10;
+  const minAbsSignificant = (floor != null) ? floor : 0;
   const isElevated = d > 0;
   const isBad = lowerBetter ? isElevated : !isElevated;
   if (Math.abs(pct) < 5) el.className = 'md flat';
-  else el.className = 'md ' + (isBad ? 'up' : 'dn');
+  else if (Math.abs(pct) >= minPctSignificant && Math.abs(d) >= minAbsSignificant){
+    el.className = 'md ' + (isBad ? 'up' : 'dn');
+  } else {
+    el.className = 'md flat';
+  }
 }
 function renderMetrics(){
   const h = state.hrv, b = state.baseline;
@@ -1759,10 +1828,10 @@ function renderMetrics(){
   els.pnn50Value.textContent = fmtN(h.pnn50, 1);
   els.lfhfValue.textContent = fmtN(h.lfHf, 2);
   els.sdvalues.textContent = `${fmtN(h.sd1,0)}·${fmtN(h.sd2,0)}`;
-  setDelta(els.hrDelta, h.hr, b ? b.hr : null, false);
-  setDelta(els.sdnnDelta, h.sdnn, b ? b.sdnn : null, true);
-  setDelta(els.rmssdDelta, h.rmssd, b ? b.rmssd : null, true);
-  setDelta(els.pnn50Delta, h.pnn50, b ? b.pnn50 : null, true);
+  setDelta(els.hrDelta, h.hr, b ? b.hr : null, false, 5);          // 5 bpm floor
+  setDelta(els.sdnnDelta, h.sdnn, b ? b.sdnn : null, true, 25);    // 25 ms floor
+  setDelta(els.rmssdDelta, h.rmssd, b ? b.rmssd : null, true, 20); // 20 ms floor
+  setDelta(els.pnn50Delta, h.pnn50, b ? b.pnn50 : null, true, 10); // 10 % floor
   if (h.lfHf != null){
     els.lfhfDelta.textContent = h.lfHf > 2.5 ? 'sympatic' : h.lfHf < 0.8 ? 'parasymp' : 'balanced';
     els.lfhfDelta.className = 'md flat';
@@ -1936,7 +2005,8 @@ function animate(){
     drawRR(Math.max(0, xMax - Math.max(30, wSec*4)), xMax+0.3);
     drawPoincare();
     drawSpectrogram();
-    drawTrend();
+    drawTrendHR();
+    drawTrendRMSSD();
     drawPat(xMin, xMax+0.3);
     drawTribo(xMin, xMax+0.3);
     state.lastPlotDraw = now;
