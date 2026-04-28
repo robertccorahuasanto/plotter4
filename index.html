@@ -935,9 +935,65 @@ function resetTwin(){
 function exportCsv(){
   if (!state.save_t_x.length && !state.save_e_x.length){ setStatus('No data.', 'warn'); return; }
   const tag = new Date().toISOString().replace(/[:.]/g, '-');
+  const out = [];
 
-  // ============ FILE 1: per-sample signals ============
-  // Includes raw + filtered ECG, tribo, R-peak/pulse-foot/PAT markers, signal quality at each sample.
+  // ============ HEADER / METADATA ============
+  out.push('# CARDIAC DIGITAL TWIN — SESSION EXPORT');
+  out.push(`# Exported: ${new Date().toISOString()}`);
+  out.push('# This file contains multiple sections, each preceded by "## SECTION:" and a column header row.');
+  out.push('# To split in Python: read with pandas line-by-line, or grep ## SECTION lines for byte offsets.');
+  out.push('');
+
+  out.push('## SECTION: METADATA');
+  out.push('Field,Value');
+  out.push(`Exported_at,${new Date().toISOString()}`);
+  out.push(`ECG_sample_rate_Hz,${ECG_FS}`);
+  out.push(`Filter_enabled,${state.filterEnabled}`);
+  out.push(`Filter_HP_Hz,${state.hpCut}`);
+  out.push(`Filter_LP_Hz,${state.lpCut}`);
+  out.push(`Beat_window_before_ms,${BEFORE_MS}`);
+  out.push(`Beat_window_after_ms,${AFTER_MS}`);
+  out.push(`Beat_window_samples,${BEAT_LEN}`);
+  out.push(`Total_ECG_samples,${state.save_e_x.length}`);
+  out.push(`Total_tribo_samples,${state.save_t_x.length}`);
+  out.push(`Total_R_peaks,${state.rPeaksT.length}`);
+  out.push(`Total_pulse_feet,${state.feetT.length}`);
+  out.push(`Total_PAT_values,${state.patTimes.length}`);
+  out.push(`Total_beats,${state.beats.length}`);
+  out.push(`Beats_normal,${state.classCounts.normal||0}`);
+  out.push(`Beats_pvc,${state.classCounts.pvc||0}`);
+  out.push(`Beats_pac,${state.classCounts.pac||0}`);
+  out.push(`Beats_abnormal,${state.classCounts.abnormal||0}`);
+  out.push(`Beats_unknown,${state.classCounts.unknown||0}`);
+  out.push(`Template_count,${state.templateCount}`);
+  out.push(`Twin_divergence_pct,${state.twinDivergence ?? ''}`);
+  out.push(`Twin_state_current,${state.twinState}`);
+  out.push(`Signal_quality_current,${state.signalQuality}`);
+  out.push(`Morphology_cutoff,${Number(els.morphCutoff.value)}`);
+  out.push(`Premature_cutoff,${Number(els.prematureCutoff.value)}`);
+  if (state.baseline){
+    out.push(`Baseline_locked_at_s,${state.baseline.lockedAt.toFixed(2)}`);
+    out.push(`Baseline_HR_bpm,${state.baseline.hr.toFixed(2)}`);
+    out.push(`Baseline_SDNN_ms,${state.baseline.sdnn.toFixed(2)}`);
+    out.push(`Baseline_RMSSD_ms,${state.baseline.rmssd.toFixed(2)}`);
+    out.push(`Baseline_pNN50_pct,${state.baseline.pnn50.toFixed(2)}`);
+    out.push(`Baseline_beats_used,${state.baseline.beats}`);
+  }
+  if (state.hrv){
+    const h = state.hrv;
+    if (h.hr != null) out.push(`Current_HR_bpm,${h.hr.toFixed(2)}`);
+    if (h.sdnn != null) out.push(`Current_SDNN_ms,${h.sdnn.toFixed(2)}`);
+    if (h.rmssd != null) out.push(`Current_RMSSD_ms,${h.rmssd.toFixed(2)}`);
+    if (h.pnn50 != null) out.push(`Current_pNN50_pct,${h.pnn50.toFixed(2)}`);
+    if (h.lf != null) out.push(`Current_LF_power,${h.lf.toFixed(4)}`);
+    if (h.hf != null) out.push(`Current_HF_power,${h.hf.toFixed(4)}`);
+    if (h.lfHf != null) out.push(`Current_LFHF_ratio,${h.lfHf.toFixed(4)}`);
+    if (h.sd1 != null) out.push(`Current_SD1_ms,${h.sd1.toFixed(2)}`);
+    if (h.sd2 != null) out.push(`Current_SD2_ms,${h.sd2.toFixed(2)}`);
+  }
+  out.push('');
+
+  // ============ SECTION: SIGNALS (per-sample) ============
   const ts = new Set();
   const td = new Map(), ed = new Map(), edr = new Map();
   for (let i=0;i<state.save_t_x.length;i++){ const k = state.save_t_x[i].toFixed(6); ts.add(k); td.set(k, state.save_t_y[i]); }
@@ -945,7 +1001,6 @@ function exportCsv(){
   const rp = new Set(state.rPeaksT.map(t => t.toFixed(4)));
   const ft = new Set(state.feetT.map(t => t.toFixed(4)));
   const pm = new Map(state.patTimes.map((t,i) => [t.toFixed(4), state.patValues[i]]));
-  // For beats: store class, sim, rr, hr keyed by 4dp time
   const bc = new Map(), bs = new Map(), brr = new Map(), bhr = new Map();
   for (const b of state.beats){
     const k = b.t.toFixed(4);
@@ -953,11 +1008,13 @@ function exportCsv(){
     if (b.rr != null) brr.set(k, b.rr);
     if (b.hr != null) bhr.set(k, b.hr);
   }
-  const lines1 = ['Time_s,Tribo_V,ECG_Filt,ECG_Raw,R_Peak,Pulse_Foot,PAT_ms,Beat_Class,Beat_Sim,Beat_RR_ms,Beat_HR_bpm,SignalQuality'];
+
+  out.push('## SECTION: SIGNALS');
+  out.push('Time_s,Tribo_V,ECG_Filt,ECG_Raw,R_Peak,Pulse_Foot,PAT_ms,Beat_Class,Beat_Sim,Beat_RR_ms,Beat_HR_bpm,SignalQuality');
   Array.from(ts).sort((a,b) => parseFloat(a)-parseFloat(b)).forEach(t => {
     const t4 = Number(t).toFixed(4);
     const sigQ = sqiAt(Number(t));
-    lines1.push([
+    out.push([
       t,
       td.get(t)??'',
       ed.get(t)??'',
@@ -972,11 +1029,13 @@ function exportCsv(){
       sigQ === 'idle' ? '' : sigQ
     ].join(','));
   });
+  out.push('');
 
-  // ============ FILE 2: beats table (one row per beat) ============
-  const lines2 = ['Beat_idx,Time_s,Class,Similarity,RR_ms,HR_bpm'];
+  // ============ SECTION: BEATS (one row per beat) ============
+  out.push('## SECTION: BEATS');
+  out.push('Beat_idx,Time_s,Class,Similarity,RR_ms,HR_bpm');
   state.beats.forEach((b, i) => {
-    lines2.push([
+    out.push([
       i,
       b.t.toFixed(4),
       b.cls,
@@ -985,164 +1044,73 @@ function exportCsv(){
       b.hr != null ? b.hr.toFixed(2) : ''
     ].join(','));
   });
+  out.push('');
 
-  // ============ FILE 3: HRV trend (1 row per HRV update) ============
-  const lines3 = ['Time_s,HR_bpm,RMSSD_ms'];
+  // ============ SECTION: HRV TREND ============
+  out.push('## SECTION: HRV_TREND');
+  out.push('Time_s,HR_bpm,RMSSD_ms');
   for (let i=0;i<state.trendHRtimes.length;i++){
-    lines3.push(`${state.trendHRtimes[i].toFixed(2)},${state.trendHRvalues[i].toFixed(2)},${state.trendRMSSDvalues[i] != null ? state.trendRMSSDvalues[i].toFixed(2) : ''}`);
+    out.push(`${state.trendHRtimes[i].toFixed(2)},${state.trendHRvalues[i].toFixed(2)},${state.trendRMSSDvalues[i] != null ? state.trendRMSSDvalues[i].toFixed(2) : ''}`);
   }
+  out.push('');
 
-  // ============ FILE 4: signal quality timeline ============
-  const lines4 = ['Time_s,Quality,STD,Drift,PeakToPeak'];
+  // ============ SECTION: SIGNAL QUALITY ============
+  out.push('## SECTION: SIGNAL_QUALITY');
+  out.push('Time_s,Quality,STD,Drift,PeakToPeak');
   for (const s of state.sqiSamples){
-    lines4.push(`${s.t.toFixed(2)},${s.level},${s.std.toFixed(2)},${s.drift.toFixed(2)},${s.ptp.toFixed(2)}`);
+    out.push(`${s.t.toFixed(2)},${s.level},${s.std.toFixed(2)},${s.drift.toFixed(2)},${s.ptp.toFixed(2)}`);
   }
+  out.push('');
 
-  // ============ FILE 5: twin state log ============
-  const lines5 = ['Time_s,State'];
-  for (const s of state.stateLog) lines5.push(`${s.t.toFixed(2)},${s.state}`);
+  // ============ SECTION: TWIN STATE LOG ============
+  out.push('## SECTION: STATE_LOG');
+  out.push('Time_s,State');
+  for (const s of state.stateLog) out.push(`${s.t.toFixed(2)},${s.state}`);
+  out.push('');
 
-  // ============ FILE 6: HRV spectrogram (long format) ============
+  // ============ SECTION: HRV SPECTROGRAM ============
   const fbins = state.spectrogram.freqBins;
   const fmax = state.spectrogram.fmax;
-  const lines6 = ['Time_s,Freq_Hz,Magnitude_log'];
+  out.push('## SECTION: SPECTROGRAM');
+  out.push('Time_s,Freq_Hz,Magnitude_log');
   for (const c of state.spectrogram.columns){
     for (let k=0;k<fbins;k++){
       const f = (k+0.5) * fmax / fbins;
-      lines6.push(`${c.t.toFixed(2)},${f.toFixed(4)},${c.mags[k].toFixed(4)}`);
+      out.push(`${c.t.toFixed(2)},${f.toFixed(4)},${c.mags[k].toFixed(4)}`);
     }
   }
+  out.push('');
 
-  // ============ FILE 7: beat template (1 row per template sample) ============
-  const lines7 = ['Sample_idx,Time_rel_ms,Amplitude_norm'];
+  // ============ SECTION: BEAT TEMPLATE ============
+  out.push('## SECTION: BEAT_TEMPLATE');
+  out.push('Sample_idx,Time_rel_ms,Amplitude_norm');
   if (state.template){
     for (let i=0;i<state.template.length;i++){
       const tRel = (i - BEFORE) * 1000 / ECG_FS;
-      lines7.push(`${i},${tRel.toFixed(2)},${state.template[i].toFixed(6)}`);
+      out.push(`${i},${tRel.toFixed(2)},${state.template[i].toFixed(6)}`);
     }
   }
+  out.push('');
 
-  // ============ FILE 8: metadata + baseline + summary stats (key-value) ============
-  const meta = [];
-  meta.push('Field,Value');
-  meta.push(`Exported_at,${new Date().toISOString()}`);
-  meta.push(`ECG_sample_rate_Hz,${ECG_FS}`);
-  meta.push(`Filter_enabled,${state.filterEnabled}`);
-  meta.push(`Filter_HP_Hz,${state.hpCut}`);
-  meta.push(`Filter_LP_Hz,${state.lpCut}`);
-  meta.push(`Beat_window_before_ms,${BEFORE_MS}`);
-  meta.push(`Beat_window_after_ms,${AFTER_MS}`);
-  meta.push(`Beat_window_samples,${BEAT_LEN}`);
-  meta.push(`Total_ECG_samples,${state.save_e_x.length}`);
-  meta.push(`Total_tribo_samples,${state.save_t_x.length}`);
-  meta.push(`Total_R_peaks,${state.rPeaksT.length}`);
-  meta.push(`Total_pulse_feet,${state.feetT.length}`);
-  meta.push(`Total_PAT_values,${state.patTimes.length}`);
-  meta.push(`Total_beats,${state.beats.length}`);
-  meta.push(`Beats_normal,${state.classCounts.normal||0}`);
-  meta.push(`Beats_pvc,${state.classCounts.pvc||0}`);
-  meta.push(`Beats_pac,${state.classCounts.pac||0}`);
-  meta.push(`Beats_abnormal,${state.classCounts.abnormal||0}`);
-  meta.push(`Beats_unknown,${state.classCounts.unknown||0}`);
-  meta.push(`Template_count,${state.templateCount}`);
-  meta.push(`Twin_divergence_pct,${state.twinDivergence ?? ''}`);
-  meta.push(`Twin_state_current,${state.twinState}`);
-  meta.push(`Signal_quality_current,${state.signalQuality}`);
-  if (state.baseline){
-    meta.push(`Baseline_locked_at_s,${state.baseline.lockedAt.toFixed(2)}`);
-    meta.push(`Baseline_HR_bpm,${state.baseline.hr.toFixed(2)}`);
-    meta.push(`Baseline_SDNN_ms,${state.baseline.sdnn.toFixed(2)}`);
-    meta.push(`Baseline_RMSSD_ms,${state.baseline.rmssd.toFixed(2)}`);
-    meta.push(`Baseline_pNN50_pct,${state.baseline.pnn50.toFixed(2)}`);
-    meta.push(`Baseline_beats_used,${state.baseline.beats}`);
-  }
-  if (state.hrv){
-    const h = state.hrv;
-    if (h.hr != null) meta.push(`Current_HR_bpm,${h.hr.toFixed(2)}`);
-    if (h.sdnn != null) meta.push(`Current_SDNN_ms,${h.sdnn.toFixed(2)}`);
-    if (h.rmssd != null) meta.push(`Current_RMSSD_ms,${h.rmssd.toFixed(2)}`);
-    if (h.pnn50 != null) meta.push(`Current_pNN50_pct,${h.pnn50.toFixed(2)}`);
-    if (h.lf != null) meta.push(`Current_LF_power,${h.lf.toFixed(4)}`);
-    if (h.hf != null) meta.push(`Current_HF_power,${h.hf.toFixed(4)}`);
-    if (h.lfHf != null) meta.push(`Current_LFHF_ratio,${h.lfHf.toFixed(4)}`);
-    if (h.sd1 != null) meta.push(`Current_SD1_ms,${h.sd1.toFixed(2)}`);
-    if (h.sd2 != null) meta.push(`Current_SD2_ms,${h.sd2.toFixed(2)}`);
-  }
-
-  // ============ FILE 9: full session JSON (everything machine-readable, including template) ============
-  const sessionJSON = {
-    exportedAt: new Date().toISOString(),
-    config: {
-      ecgSampleRate: ECG_FS,
-      filterEnabled: state.filterEnabled,
-      filterHP: state.hpCut,
-      filterLP: state.lpCut,
-      beatWindowBeforeMs: BEFORE_MS,
-      beatWindowAfterMs: AFTER_MS,
-      beatLen: BEAT_LEN,
-      morphCutoff: Number(els.morphCutoff.value),
-      prematureCutoff: Number(els.prematureCutoff.value),
-    },
-    counts: {
-      ecgSamples: state.save_e_x.length,
-      triboSamples: state.save_t_x.length,
-      rPeaks: state.rPeaksT.length,
-      pulseFeet: state.feetT.length,
-      pat: state.patTimes.length,
-      beats: state.beats.length,
-      classes: state.classCounts,
-      templateCount: state.templateCount,
-    },
-    baseline: state.baseline,
-    currentHRV: state.hrv,
-    twinDivergence: state.twinDivergence,
-    twinState: state.twinState,
-    signalQuality: state.signalQuality,
-    template: state.template,
-    beats: state.beats.map(b => ({ t:b.t, cls:b.cls, sim:b.sim, rr:b.rr, hr:b.hr, v:b.v })),
-    rPeaks: state.rPeaksT.map((t,i) => ({ t, v: state.rPeaksV[i] })),
-    pulseFeet: state.feetT.map((t,i) => ({ t, v: state.feetV[i] })),
-    pat: state.patTimes.map((t,i) => ({ t, v: state.patValues[i] })),
-    trend: {
-      hr: state.trendHRtimes.map((t,i) => ({ t, v: state.trendHRvalues[i] })),
-      rmssd: state.trendRMSSDtimes.map((t,i) => ({ t, v: state.trendRMSSDvalues[i] })),
-    },
-    sqi: state.sqiSamples,
-    stateLog: state.stateLog,
-    spectrogram: {
-      freqBins: state.spectrogram.freqBins,
-      fmax: state.spectrogram.fmax,
-      columns: state.spectrogram.columns.map(c => ({ t: c.t, mags: Array.from(c.mags) })),
-    },
-  };
-
-  // ============ DOWNLOAD HELPERS ============
-  function downloadBlob(content, filename, mime){
-    const blob = new Blob([content], { type: mime });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  // Stagger downloads slightly so the browser doesn't merge them or block popups
-  const files = [
-    [`twin_${tag}_signals.csv`, lines1.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_beats.csv`, lines2.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_hrv_trend.csv`, lines3.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_signal_quality.csv`, lines4.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_state_log.csv`, lines5.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_spectrogram.csv`, lines6.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_beat_template.csv`, lines7.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_metadata.csv`, meta.join('\n'), 'text/csv;charset=utf-8'],
-    [`twin_${tag}_session.json`, JSON.stringify(sessionJSON, null, 2), 'application/json;charset=utf-8'],
-  ];
-  files.forEach(([name, content, mime], i) => {
-    setTimeout(() => downloadBlob(content, name, mime), i * 250);
+  // ============ SECTION: BEAT WAVEFORMS (every beat, every sample) ============
+  // wide format: each row = one beat, columns = sample 0..BEAT_LEN-1
+  out.push('## SECTION: BEAT_WAVEFORMS');
+  const wfHeader = ['Beat_idx','Time_s','Class'];
+  for (let i=0;i<BEAT_LEN;i++) wfHeader.push(`s${i}`);
+  out.push(wfHeader.join(','));
+  state.beats.forEach((b, i) => {
+    const row = [i, b.t.toFixed(4), b.cls];
+    for (let j=0;j<b.v.length;j++) row.push(b.v[j].toFixed(5));
+    out.push(row.join(','));
   });
 
-  setStatus(`Exporting ${files.length} files (CSVs + JSON)...`, 'ok');
+  const blob = new Blob([out.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `twin_session_${tag}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  setStatus('Session exported as a single CSV.', 'ok');
 }
 
 // ============== REPORT ==============
