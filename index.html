@@ -265,7 +265,9 @@ details.collapsible[open]>summary::after{content:' ▴'}
       <details class="collapsible">
         <summary>R-peak detector</summary>
         <label><span>Threshold</span><input id="rpThresh" type="range" min="0.1" max="0.9" step="0.05" value="0.5" /><span id="rpThreshVal">0.50</span></label>
-        <label><span>Refractory (s)</span><input id="rpRefract" type="range" min="0.15" max="1.0" step="0.05" value="0.3" /><span id="rpRefractVal">0.30</span></label>
+        <label><span>Refractory (s)</span><input id="rpRefract" type="range" min="0.15" max="1.0" step="0.02" value="0.36" /><span id="rpRefractVal">0.36</span></label>
+        <label><span>T-wave reject (s)</span><input id="twaveWin" type="range" min="0.20" max="0.60" step="0.02" value="0.40" /><span id="twaveWinVal">0.40</span></label>
+        <label><span>T-wave amp ratio</span><input id="twaveRatio" type="range" min="0.30" max="0.90" step="0.05" value="0.60" /><span id="twaveRatioVal">0.60</span></label>
       </details>
       <details class="collapsible">
         <summary>Pulse foot detector</summary>
@@ -300,7 +302,7 @@ details.collapsible[open]>summary::after{content:' ▴'}
 'use strict';
 
 const els = {};
-['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
+['status','connectBtn','reconnectBtn','disconnectBtn','clearBtn','exportBtn','reportBtn','downloadReportBtn','closeReportBtn','reportCard','reportContent','calibrateBtn','resetTwinBtn','connectionValue','deviceValue','ecgBadge','qualityBadge','triboBadge','patBadge','templateBadge','rrBadge','poincareBadge','specBadge','hrValue','sdnnValue','rmssdValue','pnn50Value','lfhfValue','sdvalues','divergenceValue','patValue','hrDelta','sdnnDelta','rmssdDelta','pnn50Delta','lfhfDelta','divergenceDelta','patDelta','twinOrb','twinState','twinDivergence','beatStrip','insights','filterEnable','hpCut','lpCut','sqiReject','invertEcg','windowSec','serviceUuid','triboUuid','ecgUuid','rpThresh','rpThreshVal','rpRefract','rpRefractVal','twaveWin','twaveWinVal','twaveRatio','twaveRatioVal','ftSlopeThresh','ftSlopeThreshVal','ftPeakHi','ftPeakHiVal','pttMin','pttMax','pttOffset','pttOffsetVal','morphCutoff','morphCutoffVal','prematureCutoff','prematureCutoffVal','baselineDur','ecgCanvas','templateCanvas','rrCanvas','poincareCanvas','spectrogramCanvas','trendCanvas','patCanvas','triboCanvas'].forEach(id=>els[id]=document.getElementById(id));
 
 const C = {grid:'#1c2a47',gridSoft:'#152339',axis:'#7a8eb3',tribo:'#ff6b6b',ecg:'#5aa7ff',pat:'#37d67a',foot:'#ffd166',rpeak:'#ff4d6d',twin:'#a78bfa',bg:'#091120',normal:'#22c55e',pvc:'#ef4444',pac:'#f59e0b',abnormal:'#f97316',unknown:'#475569'};
 const CLS_COLOR = {normal:C.normal,pvc:C.pvc,pac:C.pac,abnormal:C.abnormal,unknown:C.unknown};
@@ -472,7 +474,7 @@ function sqiAt(t){
 
 // ============== DETECTORS ==============
 class RPeakDetector {
-  constructor(){ this.thresholdFactor=0.5; this.refractoryS=0.3; this.windowS=4.0; }
+  constructor(){ this.thresholdFactor=0.5; this.refractoryS=0.36; this.windowS=4.0; this.twaveAmpRatio=0.6; this.twaveWindowS=0.40; }
   detect(times, values){
     if (times.length < 20) return;
     const tEnd = times[times.length-1];
@@ -480,27 +482,21 @@ class RPeakDetector {
     while (s < times.length && times[s] < tEnd - this.windowS) s++;
     const t = times.slice(s), v = values.slice(s);
     if (v.length < 10) return;
-    // Robust statistics: median + MAD instead of mean+range. A single artifact
-    // spike no longer balloons the threshold and silences real peaks.
+    // Robust threshold: median + MAD
     const sorted = v.slice().sort((a,b)=>a-b);
     const median = sorted[sorted.length>>1];
     const dev = new Array(v.length);
     for (let i=0;i<v.length;i++) dev[i] = Math.abs(v[i] - median);
     dev.sort((a,b)=>a-b);
     const mad = Math.max(1, dev[dev.length>>1]);
-    // Robust upper bound — equivalent to ~95th percentile of normal beats
-    const robustHigh = median + mad * 6;     // beat amplitude ceiling
-    if (robustHigh - median < 10) return;     // no meaningful signal
-    // Threshold scales between median and robustHigh based on user knob.
-    // user 0.1 -> low/sensitive, 0.9 -> high/strict.
+    const robustHigh = median + mad * 6;
+    if (robustHigh - median < 10) return;
     const thr = median + (robustHigh - median) * this.thresholdFactor;
     const dt = Math.max(1e-6, (t[t.length-1]-t[0])/Math.max(1,t.length-1));
     const minD = Math.max(1, Math.round(this.refractoryS / dt));
     const peaks = [];
     let last = -minD;
     for (let i=1;i<v.length-1;i++){
-      // Reject obvious artifact spikes: peak must be below an upper bound
-      // (10x MAD above median). Real R-peaks rarely exceed this.
       if (v[i] > median + mad * 14) continue;
       if (v[i]>thr && v[i]>=v[i-1] && v[i]>v[i+1]){
         if (i - last >= minD){ peaks.push(i); last = i; }
@@ -514,8 +510,37 @@ class RPeakDetector {
     for (let i=0;i<state.rPeaksT.length;i++){
       if (state.rPeaksT[i] < cutoff){ keptT.push(state.rPeaksT[i]); keptV.push(state.rPeaksV[i]); }
     }
-    state.rPeaksT = keptT.concat(newT);
-    state.rPeaksV = keptV.concat(newV);
+    // ===== GLOBAL REFRACTORY PASS =====
+    // Bug fix: when a real R-peak slides out of the 4 s window, the next
+    // window starts fresh and may accept a T-wave as its first "peak", because
+    // intra-window refractory has no memory of the just-frozen kept peak.
+    // Solution: walk the entire merged list (kept ++ new) in time order and
+    // enforce the refractory + T-wave amplitude rule globally.
+    const allT = keptT.concat(newT);
+    const allV = keptV.concat(newV);
+    const refS = this.refractoryS;
+    const twS = this.twaveWindowS;
+    const twR = this.twaveAmpRatio;
+    const cleanT = [], cleanV = [];
+    for (let i=0;i<allT.length;i++){
+      const t_i = allT[i], v_i = allV[i];
+      if (cleanT.length === 0){ cleanT.push(t_i); cleanV.push(v_i); continue; }
+      const dt_prev = t_i - cleanT[cleanT.length-1];
+      const v_prev = cleanV[cleanV.length-1];
+      // Strict refractory: too close → keep the larger
+      if (dt_prev < refS){
+        if (v_i > v_prev){ cleanT[cleanT.length-1] = t_i; cleanV[cleanV.length-1] = v_i; }
+        continue;
+      }
+      // T-wave rejection: within twaveWindowS AND amplitude clearly lower
+      if (dt_prev < twS && v_i < v_prev * twR){
+        // looks like a T-wave following the previous R: reject
+        continue;
+      }
+      cleanT.push(t_i); cleanV.push(v_i);
+    }
+    state.rPeaksT = cleanT;
+    state.rPeaksV = cleanV;
     if (state.rPeaksT.length > 4000){ state.rPeaksT = state.rPeaksT.slice(-4000); state.rPeaksV = state.rPeaksV.slice(-4000); }
   }
 }
@@ -1657,6 +1682,8 @@ function updateRates(){
 function syncParams(){
   els.rpThreshVal.textContent = Number(els.rpThresh.value).toFixed(2);
   els.rpRefractVal.textContent = Number(els.rpRefract.value).toFixed(2);
+  els.twaveWinVal.textContent = Number(els.twaveWin.value).toFixed(2);
+  els.twaveRatioVal.textContent = Number(els.twaveRatio.value).toFixed(2);
   els.ftSlopeThreshVal.textContent = Number(els.ftSlopeThresh.value).toFixed(2);
   els.ftPeakHiVal.textContent = Number(els.ftPeakHi.value).toFixed(2);
   els.pttOffsetVal.textContent = String(els.pttOffset.value);
@@ -1664,6 +1691,8 @@ function syncParams(){
   els.prematureCutoffVal.textContent = Number(els.prematureCutoff.value).toFixed(2);
   rpeak.thresholdFactor = Number(els.rpThresh.value);
   rpeak.refractoryS = Number(els.rpRefract.value);
+  rpeak.twaveWindowS = Number(els.twaveWin.value);
+  rpeak.twaveAmpRatio = Number(els.twaveRatio.value);
   foot.slopeThresh = Number(els.ftSlopeThresh.value);
   foot.peakHiS = Number(els.ftPeakHi.value);
   ptt.minPttMs = Number(els.pttMin.value);
@@ -1871,7 +1900,7 @@ function animate(){
 
 // ============== INIT ==============
 function init(){
-  ['rpThresh','rpRefract','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => document.getElementById(id).addEventListener('input', syncParams));
+  ['rpThresh','rpRefract','twaveWin','twaveRatio','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => document.getElementById(id).addEventListener('input', syncParams));
   els.hpCut.addEventListener('change', configFilters);
   els.lpCut.addEventListener('change', configFilters);
   els.filterEnable.addEventListener('change', () => { state.filterEnabled = els.filterEnable.checked; ecgHP.reset(); ecgLP.reset(); resetClipper(); });
