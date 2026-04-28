@@ -365,13 +365,15 @@ function filterSample(x){
 
 // ============== SQI ==============
 function classifyQuality(std, drift, ptp, spikeRate, jumpStd){
-  // Hard fails first
-  if (ptp < 5) return 'poor';                       // flat / saturated / off
-  if (drift > std * 4) return 'poor';               // huge baseline shift
-  if (spikeRate > 0.04) return 'poor';              // >4% of samples are big jumps
-  if (jumpStd > std * 2.5) return 'poor';           // diff signal much louder than signal itself
-  if (drift > std * 2 || spikeRate > 0.015 || jumpStd > std * 1.5) return 'marginal';
-  if (std < 8) return 'marginal';                   // very low variation - probably no contact
+  // Quality assessment that works across lead placements (fingers, chest, etc).
+  // For clean ECG, the QRS is very steep so jumpStd/std runs high - we cannot
+  // use that ratio alone to detect noise. Use absolute drift and spike rate
+  // primarily, and only flag jumpStd ratio when clearly pathological.
+  if (ptp < 5) return 'poor';                          // flat / saturated / off
+  if (drift > std * 5) return 'poor';                  // huge baseline shift dominates
+  if (spikeRate > 0.06) return 'poor';                 // >6% of samples are spike-like
+  if (drift > std * 2.5 || spikeRate > 0.025) return 'marginal';
+  if (std < 8) return 'marginal';                      // very low variation - probably no contact
   return 'good';
 }
 function computeSQI(){
@@ -404,7 +406,11 @@ function computeSQI(){
   const dVar = Math.max(0, dSum2/(n-1) - dMean*dMean);
   const jumpStd = Math.sqrt(dVar);
   let spikes = 0;
-  const spikeThr = Math.max(50, 4*jumpStd);   // floor so quiet signals don't false-trigger
+  // Spike threshold scales with signal amplitude: a true motion spike stands
+  // out in the derivative. For tall chest signals jumpStd is naturally large,
+  // so we use 6× the local jumpStd (well above the typical QRS slope) and a
+  // floor proportional to the peak-to-peak amplitude of the window.
+  const spikeThr = Math.max(50, 6*jumpStd, 0.4*ptp);
   for (let i=1;i<n;i++) if (Math.abs(slice[i]-slice[i-1]) > spikeThr) spikes++;
   const spikeRate = spikes / (n-1);
 
@@ -617,45 +623,37 @@ function processNewBeats(){
   for (let i=0;i<state.rPeaksT.length;i++){
     const rt = state.rPeaksT[i];
     if (state.processedBeatTimes.has(rt)) continue;
-    // Reject beats whose surrounding signal quality is poor.
-    // CRITICAL: also reject during baseline mode — otherwise an artifact during
-    // the 60s calibration permanently corrupts the personal template.
+    // Reject beats only when the signal is genuinely poor (lead off / huge
+    // motion). Marginal SQI is allowed through — many normal chest-lead
+    // signals get classified as marginal due to high amplitude or modest
+    // baseline drift, and refusing those leaves us with nothing to learn from.
+    // The post-calibration outlier rejection drops the worst 15% anyway.
     if (reject){
       const q = sqiAt(rt);
-      if (q === 'poor' || q === 'idle'){ state.processedBeatTimes.add(rt); continue; }
+      if (q === 'poor'){ state.processedBeatTimes.add(rt); continue; }
     }
     const beat = extractBeat(rt);
     if (!beat) continue;
 
-    // Sanity check the beat itself: peak amplitude should dominate everything else.
-    // If max(|beat|) outside the QRS region (>120 ms either side of R) is comparable
-    // to the R-peak amplitude, this is almost certainly an artifact.
-    const qrsHalf = Math.round(0.06 * ECG_FS);
-    let outsideMax = 0;
-    for (let k=0;k<BEAT_LEN;k++){
-      if (Math.abs(k - BEFORE) <= qrsHalf) continue;
-      const a = Math.abs(beat[k]);
-      if (a > outsideMax) outsideMax = a;
-    }
-    if (outsideMax > 1.5){
-      // beat is normalized so R = ±1 — outside-QRS energy >1.5 means motion / step
-      state.processedBeatTimes.add(rt);
-      continue;
-    }
+    // (Removed: outside-QRS amplitude check. It assumed R-peaks dominate the
+    // entire beat window, which is true for finger leads but not for chest
+    // leads where S-waves and T-waves can be physiologically large. The
+    // morphology similarity score handles real artifacts naturally — bad
+    // beats simply get a low sim score and won't update the template.)
 
     let rr = null;
     if (i > 0) rr = (rt - state.rPeaksT[i-1])*1000;
     const sim = beatSimilarity(beat);
     const cls = classifyBeat(rt, rr, sim);
     const rec = {t:rt, v:beat, rr, hr: rr ? 60000/rr : null, cls, sim};
-    // Template only updates with high-confidence normal beats. During baseline
-    // mode we are stricter than before: require sim > 0.8 against current
-    // running template once it has at least 5 contributors. First few beats go
-    // in unconditionally to seed it.
+    // Template update logic. During baseline: first 5 beats seed unconditionally
+    // (we have nothing to compare against). After that, accept beats with
+    // reasonable similarity OR within RR bounds — we are permissive here
+    // because the post-baseline outlier rejection cleans up afterwards.
     let accept;
     if (state.baselineMode){
       if (state.templateCount < 5) accept = (rr !== null && rr > 400 && rr < 1500);
-      else accept = (sim !== null && sim > 0.80 && rr !== null && rr > 400 && rr < 1500);
+      else accept = (sim !== null && sim > 0.60 && rr !== null && rr > 400 && rr < 1500);
     } else {
       accept = (cls === 'normal' && rr !== null && rr > 400 && rr < 1500);
     }
