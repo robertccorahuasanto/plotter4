@@ -354,61 +354,13 @@ function configFilters(){
   ecgHP.reset(); ecgLP.reset();
 }
 configFilters();
-// ============== ROBUST SAMPLE CLIPPER ==============
-// Runs BEFORE the filter biquads. Tracks a running median + MAD of recent raw
-// samples; clips any incoming sample whose deviation exceeds CLIP_K * MAD.
-// Without this, one huge motion spike rings through the high-pass for ~1 s,
-// elevates the R-peak detector threshold, and silently rejects real beats.
-const CLIP_BUF_LEN = 256;            // ~2 s at 128 Hz
-const CLIP_K = 8;                    // clip beyond 8 * MAD
-const clipBuf = new Float32Array(CLIP_BUF_LEN);
-let clipBufIdx = 0;
-let clipBufFilled = 0;
-let clipMedian = 0, clipMAD = 1;
-let clipRecalcCounter = 0;
-
-function pushClipSample(x){
-  clipBuf[clipBufIdx] = x;
-  clipBufIdx = (clipBufIdx + 1) % CLIP_BUF_LEN;
-  if (clipBufFilled < CLIP_BUF_LEN) clipBufFilled++;
-}
-function recalcClipStats(){
-  // Recompute median and MAD over the buffer
-  const n = clipBufFilled;
-  if (n < 32) { clipMedian = 0; clipMAD = 1; return; }
-  const arr = new Float32Array(n);
-  for (let i=0;i<n;i++) arr[i] = clipBuf[i];
-  arr.sort();
-  clipMedian = arr[n>>1];
-  // MAD = median of |x - median|
-  const dev = new Float32Array(n);
-  for (let i=0;i<n;i++) dev[i] = Math.abs(arr[i] - clipMedian);
-  dev.sort();
-  clipMAD = Math.max(1, dev[n>>1]);
-}
-function clipRawSample(x){
-  // Push to buffer first so steady-state values are still tracked, but only
-  // push the CLIPPED value so a huge spike never enters our running stats.
-  if (clipBufFilled < 32){
-    pushClipSample(x);
-    if ((++clipRecalcCounter & 31) === 0) recalcClipStats();
-    return x;
-  }
-  const limit = CLIP_K * clipMAD;
-  let y = x;
-  if (x > clipMedian + limit) y = clipMedian + limit;
-  else if (x < clipMedian - limit) y = clipMedian - limit;
-  pushClipSample(y);
-  if ((++clipRecalcCounter & 31) === 0) recalcClipStats();
-  return y;
-}
-function resetClipper(){
-  clipBufIdx = 0; clipBufFilled = 0; clipMedian = 0; clipMAD = 1; clipRecalcCounter = 0;
-}
-
+// Simple bandpass: HP biquad + LP biquad. The R-peak detector has its own
+// robust MAD-based threshold + amplitude ceiling that rejects motion spikes,
+// so we don't need an additional sample-level clipper (a previous version
+// added one but it self-poisoned its own running stats and ended up
+// clipping real R-peaks — visible as cut/inverted peaks after the first beat).
 function filterSample(x){
-  const clipped = clipRawSample(x);
-  return state.filterEnabled ? ecgLP.process(ecgHP.process(clipped)) : clipped;
+  return state.filterEnabled ? ecgLP.process(ecgHP.process(x)) : x;
 }
 
 // ============== SQI ==============
@@ -1097,7 +1049,7 @@ function clearData(){
   state.classCounts = {normal:0,pvc:0,pac:0,abnormal:0,unknown:0};
   state.hrv = {hr:null,sdnn:null,rmssd:null,pnn50:null,lf:null,hf:null,lfHf:null,sd1:null,sd2:null};
   state.twinDivergence = null; state.signalQuality = 'idle'; state.spectrogram.columns = []; state.sessionStart = null;
-  ecgHP.reset(); ecgLP.reset(); resetClipper();
+  ecgHP.reset(); ecgLP.reset();
   els.patValue.textContent = '—';
   setStatus(state.isConnected ? 'Connected. Cleared.' : 'Cleared.', state.isConnected ? 'ok' : 'warn');
 }
@@ -1975,7 +1927,7 @@ function init(){
   ['rpThresh','rpRefract','twaveWin','twaveRatio','ftSlopeThresh','ftPeakHi','pttOffset','morphCutoff','prematureCutoff'].forEach(id => document.getElementById(id).addEventListener('input', syncParams));
   els.hpCut.addEventListener('change', configFilters);
   els.lpCut.addEventListener('change', configFilters);
-  els.filterEnable.addEventListener('change', () => { state.filterEnabled = els.filterEnable.checked; ecgHP.reset(); ecgLP.reset(); resetClipper(); });
+  els.filterEnable.addEventListener('change', () => { state.filterEnabled = els.filterEnable.checked; ecgHP.reset(); ecgLP.reset(); });
   els.connectBtn.addEventListener('click', connectBle);
   els.reconnectBtn.addEventListener('click', reconnectLast);
   els.disconnectBtn.addEventListener('click', disconnectBle);
